@@ -1,6 +1,6 @@
 "use node";
 
-import { action, internalAction, internalMutation, internalQuery } from "./_generated/server";
+import { action, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import Stripe from "stripe";
@@ -42,7 +42,7 @@ export const createCheckoutSession = action({
     const products = await Promise.all(
       args.items.map(async (item) => {
         const product = await ctx.runQuery(
-          internal.stripe.getProduct,
+          internal.stripeHelpers.getProduct,
           { id: item.productId },
         );
         if (!product) throw new Error(`Product not found: ${item.productId}`);
@@ -67,7 +67,7 @@ export const createCheckoutSession = action({
     const identity = await ctx.auth.getUserIdentity();
     let userId: string | undefined;
     if (identity) {
-      const user = await ctx.runQuery(internal.stripe.getUserByClerkId, {
+      const user = await ctx.runQuery(internal.stripeHelpers.getUserByClerkId, {
         clerkId: identity.subject,
       });
       userId = user?._id;
@@ -83,7 +83,7 @@ export const createCheckoutSession = action({
     // Create a pending order in Convex BEFORE creating Stripe session.
     // This avoids Stripe metadata size limits (500 chars per value).
     const pendingOrderId = await ctx.runMutation(
-      internal.stripe.createPendingOrder,
+      internal.stripeHelpers.createPendingOrder,
       {
         items: products.map((p) => ({
           productId: p._id,
@@ -126,82 +126,12 @@ export const createCheckoutSession = action({
     });
 
     // Update the pending order with the Stripe session ID
-    await ctx.runMutation(internal.stripe.attachStripeSession, {
+    await ctx.runMutation(internal.stripeHelpers.attachStripeSession, {
       orderId: pendingOrderId,
       stripeSessionId: session.id,
     });
 
     return session.url;
-  },
-});
-
-export const getProduct = internalQuery({
-  args: { id: v.id("products") },
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
-  },
-});
-
-export const getUserByClerkId = internalQuery({
-  args: { clerkId: v.string() },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
-      .first();
-  },
-});
-
-export const createPendingOrder = internalMutation({
-  args: {
-    items: v.array(
-      v.object({
-        productId: v.id("products"),
-        name: v.string(),
-        price: v.number(),
-        quantity: v.number(),
-      }),
-    ),
-    shippingAddress: v.object({
-      name: v.string(),
-      line1: v.string(),
-      line2: v.optional(v.string()),
-      city: v.string(),
-      state: v.string(),
-      postalCode: v.string(),
-      country: v.string(),
-    }),
-    subtotal: v.number(),
-    shipping: v.number(),
-    total: v.number(),
-    userId: v.optional(v.id("users")),
-    guestEmail: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    return await ctx.db.insert("orders", {
-      userId: args.userId,
-      guestEmail: args.guestEmail,
-      stripeSessionId: "",
-      items: args.items,
-      subtotal: args.subtotal,
-      shipping: args.shipping,
-      total: args.total,
-      shippingAddress: args.shippingAddress,
-      status: "pending",
-      createdAt: Date.now(),
-    });
-  },
-});
-
-export const attachStripeSession = internalMutation({
-  args: {
-    orderId: v.id("orders"),
-    stripeSessionId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.orderId, {
-      stripeSessionId: args.stripeSessionId,
-    });
   },
 });
 
@@ -224,50 +154,10 @@ export const handleWebhook = internalAction({
 
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
-      await ctx.runMutation(internal.stripe.fulfillOrder, {
+      await ctx.runMutation(internal.stripeHelpers.fulfillOrder, {
         stripeSessionId: session.id,
         stripePaymentIntentId: (session.payment_intent as string) ?? "",
       });
     }
-  },
-});
-
-export const fulfillOrder = internalMutation({
-  args: {
-    stripeSessionId: v.string(),
-    stripePaymentIntentId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    // Find the pending order by session ID
-    const order = await ctx.db
-      .query("orders")
-      .withIndex("by_stripeSessionId", (q) =>
-        q.eq("stripeSessionId", args.stripeSessionId),
-      )
-      .first();
-    if (!order) {
-      throw new Error(`No order found for session ${args.stripeSessionId}`);
-    }
-
-    // Idempotency: if already paid, skip
-    if (order.status !== "pending") return order._id;
-
-    // Decrement stock for each item
-    for (const item of order.items) {
-      const product = await ctx.db.get(item.productId);
-      if (product) {
-        await ctx.db.patch(item.productId, {
-          stock: Math.max(0, product.stock - item.quantity),
-        });
-      }
-    }
-
-    // Mark order as paid
-    await ctx.db.patch(order._id, {
-      status: "paid",
-      stripePaymentIntentId: args.stripePaymentIntentId,
-    });
-
-    return order._id;
   },
 });
