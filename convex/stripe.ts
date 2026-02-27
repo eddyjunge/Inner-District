@@ -1,0 +1,186 @@
+"use node";
+
+import { action, internalMutation, internalQuery } from "./_generated/server";
+import { internal } from "./_generated/api";
+import { v } from "convex/values";
+import Stripe from "stripe";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: "2024-12-18.acacia",
+});
+
+export const createCheckoutSession = action({
+  args: {
+    items: v.array(
+      v.object({
+        productId: v.id("products"),
+        quantity: v.number(),
+      }),
+    ),
+    shippingAddress: v.object({
+      name: v.string(),
+      line1: v.string(),
+      line2: v.optional(v.string()),
+      city: v.string(),
+      state: v.string(),
+      postalCode: v.string(),
+      country: v.string(),
+    }),
+    guestEmail: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // Look up products server-side — never trust client prices
+    const products = await Promise.all(
+      args.items.map(async (item) => {
+        const product = await ctx.runQuery(
+          internal.stripe.getProduct,
+          { id: item.productId },
+        );
+        if (!product) throw new Error(`Product not found: ${item.productId}`);
+        if (!product.isActive) throw new Error(`Product unavailable: ${product.name}`);
+        if (product.stock < item.quantity) {
+          throw new Error(`Insufficient stock for ${product.name}`);
+        }
+        return { ...product, quantity: item.quantity };
+      }),
+    );
+
+    // Build Stripe line items from server-side data
+    const lineItems = products.map((p) => ({
+      price: p.stripePriceId,
+      quantity: p.quantity,
+    }));
+
+    // Get shipping rate from env
+    const shippingAmount = parseInt(process.env.SHIPPING_RATE_CENTS ?? "500");
+
+    // Check if user is authenticated
+    const identity = await ctx.auth.getUserIdentity();
+    let userId: string | undefined;
+    if (identity) {
+      const user = await ctx.runQuery(internal.stripe.getUserByClerkId, {
+        clerkId: identity.subject,
+      });
+      userId = user?._id;
+    }
+
+    // Store order metadata for webhook fulfillment
+    const metadata: Record<string, string> = {
+      items: JSON.stringify(
+        products.map((p) => ({
+          productId: p._id,
+          name: p.name,
+          price: p.price,
+          quantity: p.quantity,
+        })),
+      ),
+      shippingAddress: JSON.stringify(args.shippingAddress),
+      shipping: String(shippingAmount),
+    };
+    if (userId) metadata.userId = userId;
+    if (args.guestEmail) metadata.guestEmail = args.guestEmail;
+
+    // Create Stripe Checkout Session
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      line_items: lineItems,
+      mode: "payment",
+      success_url: `${process.env.FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.FRONTEND_URL}/cancel`,
+      customer_email: args.guestEmail ?? undefined,
+      metadata,
+      shipping_options: [
+        {
+          shipping_rate_data: {
+            type: "fixed_amount",
+            fixed_amount: { amount: shippingAmount, currency: "usd" },
+            display_name: "Standard Shipping",
+          },
+        },
+      ],
+    });
+
+    return session.url;
+  },
+});
+
+export const getProduct = internalQuery({
+  args: { id: v.id("products") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
+  },
+});
+
+export const getUserByClerkId = internalQuery({
+  args: { clerkId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+  },
+});
+
+export const fulfillOrder = internalMutation({
+  args: {
+    stripeSessionId: v.string(),
+    stripePaymentIntentId: v.string(),
+    items: v.array(
+      v.object({
+        productId: v.id("products"),
+        name: v.string(),
+        price: v.number(),
+        quantity: v.number(),
+      }),
+    ),
+    shippingAddress: v.object({
+      name: v.string(),
+      line1: v.string(),
+      line2: v.optional(v.string()),
+      city: v.string(),
+      state: v.string(),
+      postalCode: v.string(),
+      country: v.string(),
+    }),
+    subtotal: v.number(),
+    shipping: v.number(),
+    total: v.number(),
+    userId: v.optional(v.id("users")),
+    guestEmail: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // Idempotency: check if order already exists for this session
+    const existing = await ctx.db
+      .query("orders")
+      .withIndex("by_stripeSessionId", (q) =>
+        q.eq("stripeSessionId", args.stripeSessionId),
+      )
+      .first();
+    if (existing) return existing._id;
+
+    // Decrement stock for each item
+    for (const item of args.items) {
+      const product = await ctx.db.get(item.productId);
+      if (product) {
+        await ctx.db.patch(item.productId, {
+          stock: Math.max(0, product.stock - item.quantity),
+        });
+      }
+    }
+
+    // Create the order
+    return await ctx.db.insert("orders", {
+      userId: args.userId,
+      guestEmail: args.guestEmail,
+      stripeSessionId: args.stripeSessionId,
+      stripePaymentIntentId: args.stripePaymentIntentId,
+      items: args.items,
+      subtotal: args.subtotal,
+      shipping: args.shipping,
+      total: args.total,
+      shippingAddress: args.shippingAddress,
+      status: "paid",
+      createdAt: Date.now(),
+    });
+  },
+});
