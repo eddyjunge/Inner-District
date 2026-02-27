@@ -1,15 +1,23 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
-import { useAuth } from "@clerk/clerk-react";
 import { api } from "../../convex/_generated/api";
 
 export default function Admin() {
-  const { isSignedIn, isLoaded } = useAuth();
-  const products = useQuery(api.admin.listProducts, isSignedIn ? {} : "skip");
-  const orders = useQuery(api.admin.listOrders, isSignedIn ? {} : "skip");
+  const [adminSecret, setAdminSecret] = useState(() =>
+    sessionStorage.getItem("admin-secret") ?? "",
+  );
+  const [authenticated, setAuthenticated] = useState(
+    () => !!sessionStorage.getItem("admin-secret"),
+  );
 
-  if (!isLoaded) return <p>Loading...</p>;
-  if (!isSignedIn) return <p>Access denied. Please sign in.</p>;
+  const products = useQuery(
+    api.admin.listProducts,
+    authenticated ? { adminSecret } : "skip",
+  );
+  const orders = useQuery(
+    api.admin.listOrders,
+    authenticated ? { adminSecret } : "skip",
+  );
   const createProduct = useMutation(api.admin.createProduct);
   const updateProduct = useMutation(api.admin.updateProduct);
   const updateOrderStatus = useMutation(api.admin.updateOrderStatus);
@@ -23,9 +31,35 @@ export default function Admin() {
     stock: "",
   });
 
+  if (!authenticated) {
+    return (
+      <div style={{ maxWidth: 300, margin: "2rem auto" }}>
+        <h1>Admin Login</h1>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            sessionStorage.setItem("admin-secret", adminSecret);
+            setAuthenticated(true);
+          }}
+        >
+          <input
+            type="password"
+            placeholder="Admin password"
+            value={adminSecret}
+            onChange={(e) => setAdminSecret(e.target.value)}
+            required
+            style={{ width: "100%", padding: "0.5rem", marginBottom: "0.5rem" }}
+          />
+          <button type="submit" style={{ width: "100%" }}>Login</button>
+        </form>
+      </div>
+    );
+  }
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     await createProduct({
+      adminSecret,
       name: newProduct.name,
       description: newProduct.description,
       price: Math.round(parseFloat(newProduct.price) * 100),
@@ -77,7 +111,7 @@ export default function Admin() {
                   <td style={{ padding: "0.5rem" }}>{p.stock}</td>
                   <td style={{ padding: "0.5rem" }}>{p.isActive ? "Yes" : "No"}</td>
                   <td style={{ padding: "0.5rem" }}>
-                    <button onClick={() => updateProduct({ id: p._id, isActive: !p.isActive })}>
+                    <button onClick={() => updateProduct({ adminSecret, id: p._id, isActive: !p.isActive })}>
                       {p.isActive ? "Deactivate" : "Activate"}
                     </button>
                   </td>
@@ -99,14 +133,14 @@ export default function Admin() {
             <div key={order._id} style={{ border: "1px solid #ddd", padding: "1rem", marginBottom: "0.5rem", borderRadius: "8px" }}>
               <p><strong>{order._id}</strong> — {order.status} — ${(order.total / 100).toFixed(2)}</p>
               <p>{new Date(order.createdAt).toLocaleString()}</p>
-              <p>{order.items.map((i) => `${i.name} x${i.quantity}`).join(", ")}</p>
+              <p>{order.items.map((i: any) => `${i.name} x${i.quantity}`).join(", ")}</p>
               {order.status === "paid" && (
-                <button onClick={() => updateOrderStatus({ id: order._id, status: "shipped" })}>
+                <button onClick={() => updateOrderStatus({ adminSecret, id: order._id, status: "shipped" })}>
                   Mark Shipped
                 </button>
               )}
               {order.status === "shipped" && (
-                <button onClick={() => updateOrderStatus({ id: order._id, status: "delivered" })}>
+                <button onClick={() => updateOrderStatus({ adminSecret, id: order._id, status: "delivered" })}>
                   Mark Delivered
                 </button>
               )}

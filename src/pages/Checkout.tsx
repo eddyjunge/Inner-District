@@ -1,13 +1,11 @@
 import { useState, FormEvent } from "react";
 import { useAction } from "convex/react";
-import { useAuth } from "@clerk/clerk-react";
 import { api } from "../../convex/_generated/api";
 import { useCart } from "../lib/cart";
 import { Link } from "react-router";
 
 export default function Checkout() {
   const { items, totalItems } = useCart();
-  const { isSignedIn } = useAuth();
   const createCheckout = useAction(api.stripe.createCheckoutSession);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +45,7 @@ export default function Checkout() {
           postalCode: form.postalCode,
           country: form.country,
         },
-        guestEmail: !isSignedIn ? form.email : undefined,
+        email: form.email,
       });
 
       if (url) {
@@ -70,9 +68,7 @@ export default function Checkout() {
         <h2>Shipping Address</h2>
         <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
           <input placeholder="Full Name" value={form.name} onChange={update("name")} required />
-          {!isSignedIn && (
-            <input placeholder="Email" type="email" value={form.email} onChange={update("email")} required />
-          )}
+          <input placeholder="Email" type="email" value={form.email} onChange={update("email")} required />
           <input placeholder="Address Line 1" value={form.line1} onChange={update("line1")} required />
           <input placeholder="Address Line 2 (optional)" value={form.line2} onChange={update("line2")} />
           <input placeholder="City" value={form.city} onChange={update("city")} required />

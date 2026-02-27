@@ -1,28 +1,24 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
-async function assertAdmin(ctx: { auth: { getUserIdentity: () => Promise<any> } }) {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) {
-    throw new Error("Not authenticated");
+function assertAdmin(adminSecret: string) {
+  const expected = process.env.ADMIN_SECRET;
+  if (!expected || adminSecret !== expected) {
+    throw new Error("Not authorized");
   }
-  const adminIds = (process.env.ADMIN_CLERK_IDS ?? "").split(",");
-  if (!adminIds.includes(identity.subject)) {
-    throw new Error("Not authorized: admin access required");
-  }
-  return identity;
 }
 
 export const listProducts = query({
-  args: {},
-  handler: async (ctx) => {
-    await assertAdmin(ctx);
+  args: { adminSecret: v.string() },
+  handler: async (ctx, args) => {
+    assertAdmin(args.adminSecret);
     return await ctx.db.query("products").collect();
   },
 });
 
 export const listOrders = query({
   args: {
+    adminSecret: v.string(),
     status: v.optional(
       v.union(
         v.literal("pending"),
@@ -34,20 +30,21 @@ export const listOrders = query({
     ),
   },
   handler: async (ctx, args) => {
-    await assertAdmin(ctx);
-    let q = ctx.db.query("orders").order("desc");
+    assertAdmin(args.adminSecret);
     if (args.status) {
-      q = ctx.db
+      return await ctx.db
         .query("orders")
         .withIndex("by_status", (idx) => idx.eq("status", args.status!))
-        .order("desc");
+        .order("desc")
+        .collect();
     }
-    return await q.collect();
+    return await ctx.db.query("orders").order("desc").collect();
   },
 });
 
 export const createProduct = mutation({
   args: {
+    adminSecret: v.string(),
     name: v.string(),
     description: v.string(),
     price: v.number(),
@@ -57,9 +54,10 @@ export const createProduct = mutation({
     stock: v.number(),
   },
   handler: async (ctx, args) => {
-    await assertAdmin(ctx);
+    assertAdmin(args.adminSecret);
+    const { adminSecret: _, ...product } = args;
     return await ctx.db.insert("products", {
-      ...args,
+      ...product,
       isActive: true,
     });
   },
@@ -67,6 +65,7 @@ export const createProduct = mutation({
 
 export const updateProduct = mutation({
   args: {
+    adminSecret: v.string(),
     id: v.id("products"),
     name: v.optional(v.string()),
     description: v.optional(v.string()),
@@ -78,8 +77,8 @@ export const updateProduct = mutation({
     isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    await assertAdmin(ctx);
-    const { id, ...updates } = args;
+    assertAdmin(args.adminSecret);
+    const { adminSecret: _, id, ...updates } = args;
     const filtered = Object.fromEntries(
       Object.entries(updates).filter(([, v]) => v !== undefined),
     );
@@ -89,6 +88,7 @@ export const updateProduct = mutation({
 
 export const updateOrderStatus = mutation({
   args: {
+    adminSecret: v.string(),
     id: v.id("orders"),
     status: v.union(
       v.literal("shipped"),
@@ -97,7 +97,7 @@ export const updateOrderStatus = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    await assertAdmin(ctx);
+    assertAdmin(args.adminSecret);
     await ctx.db.patch(args.id, { status: args.status });
   },
 });

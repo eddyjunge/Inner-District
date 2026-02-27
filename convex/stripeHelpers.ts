@@ -8,16 +8,6 @@ export const getProduct = internalQuery({
   },
 });
 
-export const getUserByClerkId = internalQuery({
-  args: { clerkId: v.string() },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
-      .first();
-  },
-});
-
 export const createPendingOrder = internalMutation({
   args: {
     items: v.array(
@@ -40,13 +30,11 @@ export const createPendingOrder = internalMutation({
     subtotal: v.number(),
     shipping: v.number(),
     total: v.number(),
-    userId: v.optional(v.id("users")),
-    guestEmail: v.optional(v.string()),
+    email: v.string(),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("orders", {
-      userId: args.userId,
-      guestEmail: args.guestEmail,
+      email: args.email,
       stripeSessionId: "",
       items: args.items,
       subtotal: args.subtotal,
@@ -77,7 +65,6 @@ export const fulfillOrder = internalMutation({
     stripePaymentIntentId: v.string(),
   },
   handler: async (ctx, args) => {
-    // Find the pending order by session ID
     const order = await ctx.db
       .query("orders")
       .withIndex("by_stripeSessionId", (q) =>
@@ -87,11 +74,8 @@ export const fulfillOrder = internalMutation({
     if (!order) {
       throw new Error(`No order found for session ${args.stripeSessionId}`);
     }
-
-    // Idempotency: if already paid, skip
     if (order.status !== "pending") return order._id;
 
-    // Decrement stock for each item
     for (const item of order.items) {
       const product = await ctx.db.get(item.productId);
       if (product) {
@@ -101,7 +85,6 @@ export const fulfillOrder = internalMutation({
       }
     }
 
-    // Mark order as paid
     await ctx.db.patch(order._id, {
       status: "paid",
       stripePaymentIntentId: args.stripePaymentIntentId,

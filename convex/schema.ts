@@ -15,8 +15,7 @@ export default defineSchema({
     .index("by_isActive", ["isActive"]),
 
   orders: defineTable({
-    userId: v.optional(v.id("users")),
-    guestEmail: v.optional(v.string()),
+    email: v.string(),
     stripeSessionId: v.string(),
     stripePaymentIntentId: v.optional(v.string()),
     items: v.array(
@@ -47,14 +46,7 @@ export default defineSchema({
       v.literal("cancelled"),
     ),
     createdAt: v.number(),
-  }).index("by_userId", ["userId"])
-    .index("by_stripeSessionId", ["stripeSessionId"])
-    .index("by_status", ["status"]),
-
-  users: defineTable({
-    clerkId: v.string(),
-    email: v.string(),
-    name: v.optional(v.string()),
-    createdAt: v.number(),
-  }).index("by_clerkId", ["clerkId"]),
+  }).index("by_stripeSessionId", ["stripeSessionId"])
+    .index("by_status", ["status"])
+    .index("by_email", ["email"]),
 });

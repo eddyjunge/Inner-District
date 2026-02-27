@@ -28,7 +28,7 @@ export const createCheckoutSession = action({
       postalCode: v.string(),
       country: v.string(),
     }),
-    guestEmail: v.optional(v.string()),
+    email: v.string(),
   },
   handler: async (ctx, args) => {
     // Validate quantities
@@ -63,16 +63,6 @@ export const createCheckoutSession = action({
     // Get shipping rate from env
     const shippingAmount = parseInt(process.env.SHIPPING_RATE_CENTS ?? "500");
 
-    // Check if user is authenticated
-    const identity = await ctx.auth.getUserIdentity();
-    let userId: string | undefined;
-    if (identity) {
-      const user = await ctx.runQuery(internal.stripeHelpers.getUserByClerkId, {
-        clerkId: identity.subject,
-      });
-      userId = user?._id;
-    }
-
     // Compute totals server-side
     const subtotal = products.reduce(
       (sum, p) => sum + p.price * p.quantity,
@@ -80,8 +70,7 @@ export const createCheckoutSession = action({
     );
     const total = subtotal + shippingAmount;
 
-    // Create a pending order in Convex BEFORE creating Stripe session.
-    // This avoids Stripe metadata size limits (500 chars per value).
+    // Create a pending order in Convex BEFORE creating Stripe session
     const pendingOrderId = await ctx.runMutation(
       internal.stripeHelpers.createPendingOrder,
       {
@@ -95,12 +84,10 @@ export const createCheckoutSession = action({
         subtotal,
         shipping: shippingAmount,
         total,
-        userId,
-        guestEmail: args.guestEmail,
+        email: args.email,
       },
     );
 
-    // Only pass the order ID in Stripe metadata — no size limit risk
     const metadata: Record<string, string> = {
       convexOrderId: pendingOrderId,
     };
@@ -112,7 +99,7 @@ export const createCheckoutSession = action({
       mode: "payment",
       success_url: `${process.env.FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.FRONTEND_URL}/cancel`,
-      customer_email: args.guestEmail ?? undefined,
+      customer_email: args.email,
       metadata,
       shipping_options: [
         {
@@ -125,7 +112,6 @@ export const createCheckoutSession = action({
       ],
     });
 
-    // Update the pending order with the Stripe session ID
     await ctx.runMutation(internal.stripeHelpers.attachStripeSession, {
       orderId: pendingOrderId,
       stripeSessionId: session.id,
