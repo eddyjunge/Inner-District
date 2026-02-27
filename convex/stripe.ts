@@ -5,9 +5,11 @@ import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-12-18.acacia",
-});
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: "2024-12-18.acacia",
+  });
+}
 
 export const createCheckoutSession = action({
   args: {
@@ -104,7 +106,7 @@ export const createCheckoutSession = action({
     };
 
     // Create Stripe Checkout Session
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: lineItems,
       mode: "payment",
@@ -211,7 +213,7 @@ export const handleWebhook = internalAction({
   handler: async (ctx, args) => {
     let event: Stripe.Event;
     try {
-      event = stripe.webhooks.constructEvent(
+      event = getStripe().webhooks.constructEvent(
         args.body,
         args.signature,
         process.env.STRIPE_WEBHOOK_SECRET!,
