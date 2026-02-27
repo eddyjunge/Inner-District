@@ -24,7 +24,6 @@
   "description": "",
   "dependencies": {
     "@clerk/clerk-react": "^5.61.3",
-    "@stripe/stripe-js": "^8.8.0",
     "convex": "^1.32.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

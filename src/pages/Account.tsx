@@ -1,9 +1,23 @@
 import { useQuery } from "convex/react";
+import { useAuth } from "@clerk/clerk-react";
+import { SignInButton } from "@clerk/clerk-react";
 import { api } from "../../convex/_generated/api";
 import { Link } from "react-router";
 
 export default function Account() {
-  const orders = useQuery(api.orders.listByUser);
+  const { isSignedIn, isLoaded } = useAuth();
+  const orders = useQuery(api.orders.listByUser, isSignedIn ? {} : "skip");
+
+  if (!isLoaded) return <p>Loading...</p>;
+  if (!isSignedIn) {
+    return (
+      <div>
+        <h1>My Orders</h1>
+        <p>Please sign in to view your order history.</p>
+        <SignInButton mode="modal" />
+      </div>
+    );
+  }
 
   if (orders === undefined) return <p>Loading...</p>;
 

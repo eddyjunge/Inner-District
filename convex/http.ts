@@ -37,27 +37,11 @@ http.route({
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
 
-      const items = JSON.parse(session.metadata?.items ?? "[]");
-      const shippingAddress = JSON.parse(
-        session.metadata?.shippingAddress ?? "{}",
-      );
-      const shipping = parseInt(session.metadata?.shipping ?? "0");
-      const userId = session.metadata?.userId ?? undefined;
-      const guestEmail = session.metadata?.guestEmail ?? session.customer_email ?? undefined;
-
-      const subtotal = session.amount_subtotal ?? 0;
-      const total = session.amount_total ?? 0;
-
+      // Order data is stored in Convex (not in Stripe metadata).
+      // The webhook just needs to mark it as paid and decrement stock.
       await ctx.runMutation(internal.stripe.fulfillOrder, {
         stripeSessionId: session.id,
         stripePaymentIntentId: (session.payment_intent as string) ?? "",
-        items,
-        shippingAddress,
-        subtotal,
-        shipping,
-        total,
-        userId,
-        guestEmail,
       });
     }
 

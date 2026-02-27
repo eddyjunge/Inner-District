@@ -48,11 +48,22 @@ export const get = query({
 export const getBySessionId = query({
   args: { stripeSessionId: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const order = await ctx.db
       .query("orders")
       .withIndex("by_stripeSessionId", (q) =>
         q.eq("stripeSessionId", args.stripeSessionId),
       )
       .first();
+    if (!order) return null;
+    // Return limited fields only — session ID is visible in URLs
+    return {
+      _id: order._id,
+      items: order.items,
+      subtotal: order.subtotal,
+      shipping: order.shipping,
+      total: order.total,
+      status: order.status,
+      createdAt: order.createdAt,
+    };
   },
 });

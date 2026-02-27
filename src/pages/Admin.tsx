@@ -1,10 +1,15 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
+import { useAuth } from "@clerk/clerk-react";
 import { api } from "../../convex/_generated/api";
 
 export default function Admin() {
-  const products = useQuery(api.admin.listProducts);
-  const orders = useQuery(api.admin.listOrders, {});
+  const { isSignedIn, isLoaded } = useAuth();
+  const products = useQuery(api.admin.listProducts, isSignedIn ? {} : "skip");
+  const orders = useQuery(api.admin.listOrders, isSignedIn ? {} : "skip");
+
+  if (!isLoaded) return <p>Loading...</p>;
+  if (!isSignedIn) return <p>Access denied. Please sign in.</p>;
   const createProduct = useMutation(api.admin.createProduct);
   const updateProduct = useMutation(api.admin.updateProduct);
   const updateOrderStatus = useMutation(api.admin.updateOrderStatus);

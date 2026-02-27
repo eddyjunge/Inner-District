@@ -29,6 +29,13 @@ export const createCheckoutSession = action({
     guestEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Validate quantities
+    for (const item of args.items) {
+      if (!Number.isInteger(item.quantity) || item.quantity < 1) {
+        throw new Error("Invalid quantity: must be a positive integer");
+      }
+    }
+
     // Look up products server-side — never trust client prices
     const products = await Promise.all(
       args.items.map(async (item) => {
@@ -64,21 +71,37 @@ export const createCheckoutSession = action({
       userId = user?._id;
     }
 
-    // Store order metadata for webhook fulfillment
-    const metadata: Record<string, string> = {
-      items: JSON.stringify(
-        products.map((p) => ({
+    // Compute totals server-side
+    const subtotal = products.reduce(
+      (sum, p) => sum + p.price * p.quantity,
+      0,
+    );
+    const total = subtotal + shippingAmount;
+
+    // Create a pending order in Convex BEFORE creating Stripe session.
+    // This avoids Stripe metadata size limits (500 chars per value).
+    const pendingOrderId = await ctx.runMutation(
+      internal.stripe.createPendingOrder,
+      {
+        items: products.map((p) => ({
           productId: p._id,
           name: p.name,
           price: p.price,
           quantity: p.quantity,
         })),
-      ),
-      shippingAddress: JSON.stringify(args.shippingAddress),
-      shipping: String(shippingAmount),
+        shippingAddress: args.shippingAddress,
+        subtotal,
+        shipping: shippingAmount,
+        total,
+        userId,
+        guestEmail: args.guestEmail,
+      },
+    );
+
+    // Only pass the order ID in Stripe metadata — no size limit risk
+    const metadata: Record<string, string> = {
+      convexOrderId: pendingOrderId,
     };
-    if (userId) metadata.userId = userId;
-    if (args.guestEmail) metadata.guestEmail = args.guestEmail;
 
     // Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
@@ -98,6 +121,12 @@ export const createCheckoutSession = action({
           },
         },
       ],
+    });
+
+    // Update the pending order with the Stripe session ID
+    await ctx.runMutation(internal.stripe.attachStripeSession, {
+      orderId: pendingOrderId,
+      stripeSessionId: session.id,
     });
 
     return session.url;
@@ -121,10 +150,8 @@ export const getUserByClerkId = internalQuery({
   },
 });
 
-export const fulfillOrder = internalMutation({
+export const createPendingOrder = internalMutation({
   args: {
-    stripeSessionId: v.string(),
-    stripePaymentIntentId: v.string(),
     items: v.array(
       v.object({
         productId: v.id("products"),
@@ -149,17 +176,55 @@ export const fulfillOrder = internalMutation({
     guestEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Idempotency: check if order already exists for this session
-    const existing = await ctx.db
+    return await ctx.db.insert("orders", {
+      userId: args.userId,
+      guestEmail: args.guestEmail,
+      stripeSessionId: "",
+      items: args.items,
+      subtotal: args.subtotal,
+      shipping: args.shipping,
+      total: args.total,
+      shippingAddress: args.shippingAddress,
+      status: "pending",
+      createdAt: Date.now(),
+    });
+  },
+});
+
+export const attachStripeSession = internalMutation({
+  args: {
+    orderId: v.id("orders"),
+    stripeSessionId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.orderId, {
+      stripeSessionId: args.stripeSessionId,
+    });
+  },
+});
+
+export const fulfillOrder = internalMutation({
+  args: {
+    stripeSessionId: v.string(),
+    stripePaymentIntentId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Find the pending order by session ID
+    const order = await ctx.db
       .query("orders")
       .withIndex("by_stripeSessionId", (q) =>
         q.eq("stripeSessionId", args.stripeSessionId),
       )
       .first();
-    if (existing) return existing._id;
+    if (!order) {
+      throw new Error(`No order found for session ${args.stripeSessionId}`);
+    }
+
+    // Idempotency: if already paid, skip
+    if (order.status !== "pending") return order._id;
 
     // Decrement stock for each item
-    for (const item of args.items) {
+    for (const item of order.items) {
       const product = await ctx.db.get(item.productId);
       if (product) {
         await ctx.db.patch(item.productId, {
@@ -168,19 +233,12 @@ export const fulfillOrder = internalMutation({
       }
     }
 
-    // Create the order
-    return await ctx.db.insert("orders", {
-      userId: args.userId,
-      guestEmail: args.guestEmail,
-      stripeSessionId: args.stripeSessionId,
-      stripePaymentIntentId: args.stripePaymentIntentId,
-      items: args.items,
-      subtotal: args.subtotal,
-      shipping: args.shipping,
-      total: args.total,
-      shippingAddress: args.shippingAddress,
+    // Mark order as paid
+    await ctx.db.patch(order._id, {
       status: "paid",
-      createdAt: Date.now(),
+      stripePaymentIntentId: args.stripePaymentIntentId,
     });
+
+    return order._id;
   },
 });
