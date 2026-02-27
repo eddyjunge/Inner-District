@@ -1,0 +1,38 @@
+{
+  "name": "innerdistrict",
+  "version": "1.0.0",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eddyjunge/Inner-District.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/eddyjunge/Inner-District/issues"
+  },
+  "homepage": "https://github.com/eddyjunge/Inner-District#readme",
+  "description": "",
+  "dependencies": {
+    "@clerk/clerk-react": "^5.61.3",
+    "@stripe/stripe-js": "^8.8.0",
+    "convex": "^1.32.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-router": "^7.13.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.4",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.1"
+  }
+}
