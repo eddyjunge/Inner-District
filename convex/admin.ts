@@ -86,6 +86,17 @@ export const updateProduct = mutation({
   },
 });
 
+export const deleteProduct = mutation({
+  args: {
+    adminSecret: v.string(),
+    id: v.id("products"),
+  },
+  handler: async (ctx, args) => {
+    assertAdmin(args.adminSecret);
+    await ctx.db.delete(args.id);
+  },
+});
+
 export const updateOrderStatus = mutation({
   args: {
     adminSecret: v.string(),

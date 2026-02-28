@@ -9,11 +9,13 @@
  */
 
 import type * as admin from "../admin.js";
+import type * as demoOrders from "../demoOrders.js";
 import type * as http from "../http.js";
 import type * as orders from "../orders.js";
 import type * as products from "../products.js";
 import type * as stripe from "../stripe.js";
 import type * as stripeHelpers from "../stripeHelpers.js";
+import type * as upload from "../upload.js";
 
 import type {
   ApiFromModules,
@@ -23,11 +25,13 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
+  demoOrders: typeof demoOrders;
   http: typeof http;
   orders: typeof orders;
   products: typeof products;
   stripe: typeof stripe;
   stripeHelpers: typeof stripeHelpers;
+  upload: typeof upload;
 }>;
 
 /**

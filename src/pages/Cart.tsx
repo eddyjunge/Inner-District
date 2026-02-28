@@ -14,13 +14,15 @@ export default function Cart() {
   if (totalItems === 0) {
     return (
       <div>
-        <h1>Cart</h1>
-        <p>Your cart is empty. <Link to="/">Browse products</Link></p>
+        <h1 className="cart__title">Cart</h1>
+        <p className="cart__empty">
+          Your cart is empty. <Link to="/">Browse products</Link>
+        </p>
       </div>
     );
   }
 
-  if (products === undefined) return <p>Loading...</p>;
+  if (products === undefined) return <p className="loading">Loading</p>;
 
   const cartWithProducts = items
     .map((item) => {
@@ -36,27 +38,50 @@ export default function Cart() {
 
   return (
     <div>
-      <h1>Cart</h1>
+      <h1 className="cart__title">Cart</h1>
       {cartWithProducts.map(({ productId, quantity, product }) => (
-        <div key={productId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.5rem 0", borderBottom: "1px solid #eee" }}>
+        <div key={productId} className="cart-item">
           <div>
-            <strong>{product.name}</strong>
-            <span> — ${(product.price / 100).toFixed(2)} each</span>
+            <div className="cart-item__name">{product.name}</div>
+            <div className="cart-item__price">
+              ${(product.price / 100).toFixed(2)} each
+              {quantity >= product.stock && (
+                <span className="cart-item__limit"> · max reached</span>
+              )}
+            </div>
           </div>
-          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-            <button onClick={() => updateQuantity(productId, quantity - 1)}>-</button>
-            <span>{quantity}</span>
-            <button onClick={() => updateQuantity(productId, quantity + 1)}>+</button>
-            <button onClick={() => removeItem(productId)}>Remove</button>
+          <div className="cart-item__controls">
+            <button
+              className="cart-item__qty-btn"
+              onClick={() => updateQuantity(productId, quantity - 1)}
+            >
+              -
+            </button>
+            <span className="cart-item__qty">{quantity}</span>
+            <button
+              className="cart-item__qty-btn"
+              onClick={() => updateQuantity(productId, quantity + 1)}
+              disabled={quantity >= product.stock}
+            >
+              +
+            </button>
+            <button
+              className="cart-item__remove"
+              onClick={() => removeItem(productId)}
+            >
+              Remove
+            </button>
           </div>
         </div>
       ))}
-      <p style={{ marginTop: "1rem", fontSize: "1.2rem" }}>
-        Subtotal: ${(subtotal / 100).toFixed(2)}
-      </p>
-      <Link to="/checkout">
-        <button>Proceed to Checkout</button>
-      </Link>
+      <div className="cart__footer">
+        <p className="cart__subtotal">
+          Subtotal: ${(subtotal / 100).toFixed(2)}
+        </p>
+        <Link to="/checkout">
+          <button className="cart__checkout-btn">Proceed to Checkout</button>
+        </Link>
+      </div>
     </div>
   );
 }

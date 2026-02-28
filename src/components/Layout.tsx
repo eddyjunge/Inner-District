@@ -6,15 +6,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div>
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1rem 2rem", borderBottom: "1px solid #ddd" }}>
-        <Link to="/" style={{ textDecoration: "none", color: "inherit" }}>
-          <strong>Inner District</strong>
+      <header className="header">
+        <Link to="/" className="header__brand">
+          <img src="/logo.png" alt="" className="header__logo" />
+          <span>Inner District</span>
         </Link>
-        <nav style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-          <Link to="/cart">Cart ({totalItems})</Link>
+        <nav>
+          <Link to="/cart" className="header__cart-link">
+            Cart
+            <span className="header__cart-count">{totalItems}</span>
+          </Link>
         </nav>
       </header>
-      <main style={{ padding: "2rem" }}>{children}</main>
+      <main className="main">{children}</main>
     </div>
   );
 }

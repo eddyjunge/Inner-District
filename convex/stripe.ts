@@ -6,9 +6,7 @@ import { v } from "convex/values";
 import Stripe from "stripe";
 
 function getStripe() {
-  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2024-12-18.acacia",
-  });
+  return new Stripe(process.env.STRIPE_SECRET_KEY!);
 }
 
 export const createCheckoutSession = action({
@@ -30,7 +28,7 @@ export const createCheckoutSession = action({
     }),
     email: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<string | null> => {
     // Validate quantities
     for (const item of args.items) {
       if (!Number.isInteger(item.quantity) || item.quantity < 1) {
@@ -39,7 +37,7 @@ export const createCheckoutSession = action({
     }
 
     // Look up products server-side — never trust client prices
-    const products = await Promise.all(
+    const validatedItems = await Promise.all(
       args.items.map(async (item) => {
         const product = await ctx.runQuery(
           internal.stripeHelpers.getProduct,
@@ -50,12 +48,12 @@ export const createCheckoutSession = action({
         if (product.stock < item.quantity) {
           throw new Error(`Insufficient stock for ${product.name}`);
         }
-        return { ...product, quantity: item.quantity };
+        return { _id: product._id, name: product.name, price: product.price, stripePriceId: product.stripePriceId, quantity: item.quantity };
       }),
     );
 
     // Build Stripe line items from server-side data
-    const lineItems = products.map((p) => ({
+    const lineItems = validatedItems.map((p) => ({
       price: p.stripePriceId,
       quantity: p.quantity,
     }));
@@ -64,7 +62,7 @@ export const createCheckoutSession = action({
     const shippingAmount = parseInt(process.env.SHIPPING_RATE_CENTS ?? "500");
 
     // Compute totals server-side
-    const subtotal = products.reduce(
+    const subtotal = validatedItems.reduce(
       (sum, p) => sum + p.price * p.quantity,
       0,
     );
@@ -74,7 +72,7 @@ export const createCheckoutSession = action({
     const pendingOrderId = await ctx.runMutation(
       internal.stripeHelpers.createPendingOrder,
       {
-        items: products.map((p) => ({
+        items: validatedItems.map((p) => ({
           productId: p._id,
           name: p.name,
           price: p.price,

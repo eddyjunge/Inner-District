@@ -19,14 +19,15 @@ export default function Success() {
   );
 
   return (
-    <div>
-      <h1>Payment Successful!</h1>
+    <div className="status-page">
+      <h1 className="status-page__title">Payment Successful</h1>
       {order ? (
         <div>
-          <p>Order confirmed. Total: ${(order.total / 100).toFixed(2)}</p>
-          <p>Status: {order.status}</p>
-          <p>Items:</p>
-          <ul>
+          <p className="status-page__detail">
+            Total: ${(order.total / 100).toFixed(2)}
+          </p>
+          <p className="status-page__detail">Status: {order.status}</p>
+          <ul className="status-page__items">
             {order.items.map((item, i) => (
               <li key={i}>
                 {item.name} x{item.quantity} — ${(item.price / 100).toFixed(2)}
@@ -35,9 +36,13 @@ export default function Success() {
           </ul>
         </div>
       ) : (
-        <p>Processing your order... This page will update automatically.</p>
+        <p className="status-page__msg">
+          Processing your order... This page will update automatically.
+        </p>
       )}
-      <Link to="/">Continue Shopping</Link>
+      <Link to="/" className="status-page__link">
+        Continue Shopping
+      </Link>
     </div>
   );
 }
