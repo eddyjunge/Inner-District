@@ -37,8 +37,9 @@ export const upsertRates = internalMutation({
 
 export const fetchAndCache = action({
   args: {},
-  handler: async (ctx) => {
-    const cached = await ctx.runQuery(internal.exchangeRates.getCached);
+  handler: async (ctx): Promise<Record<string, number> | null> => {
+    const cached: { rates: Record<string, number>; updatedAt: number } | null =
+      await ctx.runQuery(internal.exchangeRates.getCached);
     if (cached && Date.now() - cached.updatedAt < CACHE_DURATION_MS) {
       return cached.rates;
     }
