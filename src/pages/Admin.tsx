@@ -11,7 +11,8 @@ interface ProductForm {
   category: string;
   stock: string;
   productType: "physical" | "digital";
-  downloadUrl: string;
+  downloadFileId: string;
+  downloadFileName: string;
   licenseKey: string;
 }
 
@@ -23,7 +24,8 @@ const emptyForm: ProductForm = {
   category: "",
   stock: "",
   productType: "physical",
-  downloadUrl: "",
+  downloadFileId: "",
+  downloadFileName: "",
   licenseKey: "",
 };
 
@@ -54,9 +56,11 @@ export default function Admin() {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [uploadingDigital, setUploadingDigital] = useState(false);
   const [editingId, setEditingId] = useState<Id<"products"> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const digitalFileInputRef = useRef<HTMLInputElement>(null);
 
   const uploadFiles = useCallback(async (files: FileList | File[]) => {
     setUploading(true);
@@ -77,6 +81,19 @@ export default function Admin() {
     setUploading(false);
   }, [generateUploadUrl, getImageUrl]);
 
+  const uploadDigitalFile = useCallback(async (file: File) => {
+    setUploadingDigital(true);
+    const uploadUrl = await generateUploadUrl();
+    const result = await fetch(uploadUrl, {
+      method: "POST",
+      headers: { "Content-Type": file.type },
+      body: file,
+    });
+    const { storageId } = await result.json();
+    setForm((p) => ({ ...p, downloadFileId: storageId, downloadFileName: file.name }));
+    setUploadingDigital(false);
+  }, [generateUploadUrl]);
+
   const startEdit = (p: NonNullable<typeof products>[number]) => {
     setEditingId(p._id);
     setForm({
@@ -87,7 +104,8 @@ export default function Admin() {
       category: p.category,
       stock: String(p.stock),
       productType: (p.productType as "physical" | "digital") ?? "physical",
-      downloadUrl: p.downloadUrl ?? "",
+      downloadFileId: (p.downloadFileId as string) ?? "",
+      downloadFileName: p.downloadFileId ? "Uploaded file" : "",
       licenseKey: p.licenseKey ?? "",
     });
     setImageUrls(p.images || []);
@@ -139,7 +157,7 @@ export default function Admin() {
         category: form.category,
         stock: parseInt(form.stock),
         productType: form.productType,
-        downloadUrl: form.productType === "digital" && form.downloadUrl ? form.downloadUrl : undefined,
+        downloadFileId: form.productType === "digital" && form.downloadFileId ? form.downloadFileId as any : undefined,
         licenseKey: form.productType === "digital" && form.licenseKey ? form.licenseKey : undefined,
       });
       setEditingId(null);
@@ -154,7 +172,7 @@ export default function Admin() {
         category: form.category,
         stock: parseInt(form.stock),
         productType: form.productType,
-        downloadUrl: form.productType === "digital" && form.downloadUrl ? form.downloadUrl : undefined,
+        downloadFileId: form.productType === "digital" && form.downloadFileId ? form.downloadFileId as any : undefined,
         licenseKey: form.productType === "digital" && form.licenseKey ? form.licenseKey : undefined,
       });
     }
@@ -228,11 +246,42 @@ export default function Admin() {
 
           {form.productType === "digital" && (
             <>
-              <input
-                placeholder="Download URL (optional)"
-                value={form.downloadUrl}
-                onChange={(e) => setForm((p) => ({ ...p, downloadUrl: e.target.value }))}
-              />
+              {form.downloadFileId ? (
+                <div className="admin__file-info">
+                  <span className="admin__file-name">{form.downloadFileName}</span>
+                  <button
+                    type="button"
+                    className="admin__file-remove"
+                    onClick={() => setForm((p) => ({ ...p, downloadFileId: "", downloadFileName: "" }))}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div
+                  className="admin__file-upload"
+                  onClick={() => digitalFileInputRef.current?.click()}
+                >
+                  {uploadingDigital ? (
+                    <span className="upload-zone__uploading">Uploading...</span>
+                  ) : (
+                    <span className="admin__file-upload-text">
+                      Click to upload digital file
+                    </span>
+                  )}
+                  <input
+                    ref={digitalFileInputRef}
+                    type="file"
+                    hidden
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files.length > 0) {
+                        uploadDigitalFile(e.target.files[0]);
+                        e.target.value = "";
+                      }
+                    }}
+                  />
+                </div>
+              )}
               <input
                 placeholder="License Key (optional)"
                 value={form.licenseKey}
@@ -450,9 +499,9 @@ export default function Admin() {
                         .map((item: any, idx: number) => (
                           <div key={idx} style={{ marginBottom: "0.5rem" }}>
                             <div style={{ fontSize: "0.75rem", fontWeight: "bold" }}>{item.name}</div>
-                            {item.downloadUrl && (
+                            {item.downloadFileId && (
                               <div style={{ fontSize: "0.7rem", color: "var(--muted)" }}>
-                                URL: <a href={item.downloadUrl} target="_blank" rel="noopener noreferrer">{item.downloadUrl}</a>
+                                File uploaded
                               </div>
                             )}
                             {item.licenseKey && (
