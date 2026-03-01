@@ -148,12 +148,9 @@ export default function Admin() {
                 password: loginPassword,
                 flow: isSignUp ? "signUp" : "signIn",
               });
-            } catch {
-              setLoginError(
-                isSignUp
-                  ? "Could not create account. Try a stronger password."
-                  : "Invalid credentials or account not found.",
-              );
+            } catch (err: any) {
+              const msg = err?.message ?? String(err);
+              setLoginError(msg);
             }
             setLoginLoading(false);
           }}
