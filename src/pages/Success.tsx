@@ -45,6 +45,30 @@ export default function Success() {
               </li>
             ))}
           </ul>
+          {order.items.some((item: any) => (item.productType ?? "physical") === "digital") && (
+            <div className="status-page__digital" style={{ marginTop: "2rem" }}>
+              <h2 className="status-page__subtitle">Digital Downloads</h2>
+              {order.items
+                .filter((item: any) => (item.productType ?? "physical") === "digital")
+                .map((item: any, i: number) => (
+                  <div key={i} style={{ marginBottom: "1rem" }}>
+                    <strong>{item.name}</strong>
+                    {item.downloadUrl && (
+                      <p>
+                        <a href={item.downloadUrl} target="_blank" rel="noopener noreferrer" className="status-page__download-link">
+                          Download
+                        </a>
+                      </p>
+                    )}
+                    {item.licenseKey && (
+                      <p className="status-page__license">
+                        License Key: <code>{item.licenseKey}</code>
+                      </p>
+                    )}
+                  </div>
+                ))}
+            </div>
+          )}
         </div>
       ) : (
         <p className="status-page__msg">
