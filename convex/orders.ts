@@ -14,6 +14,7 @@ export const getBySessionId = query({
     // Return limited fields — session ID is visible in URLs
     return {
       _id: order._id,
+      email: order.email,
       items: order.items,
       subtotal: order.subtotal,
       shipping: order.shipping,
