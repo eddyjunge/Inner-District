@@ -249,61 +249,63 @@ export default function Admin() {
         {products === undefined ? (
           <p className="loading">Loading</p>
         ) : (
-          <table className="admin__table">
-            <thead>
-              <tr>
-                <th>Image</th>
-                <th>Name</th>
-                <th>Price</th>
-                <th>Stock</th>
-                <th>Active</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((p) => (
-                <tr key={p._id}>
-                  <td>
-                    {p.images && p.images.length > 0 ? (
-                      <img
-                        src={p.images[0]}
-                        alt=""
-                        style={{ width: 40, height: 40, objectFit: "cover", border: "1px solid var(--fg)" }}
-                      />
-                    ) : (
-                      <span style={{ color: "var(--muted)", fontSize: "0.6rem" }}>—</span>
-                    )}
-                  </td>
-                  <td>{p.name}</td>
-                  <td>${(p.price / 100).toFixed(2)}</td>
-                  <td>{p.stock}</td>
-                  <td>{p.isActive ? "Yes" : "No"}</td>
-                  <td>
-                    <div className="admin__table-actions">
-                      <button
-                        className="admin__action-btn"
-                        onClick={() => startEdit(p)}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="admin__action-btn"
-                        onClick={() => updateProduct({ adminSecret, id: p._id, isActive: !p.isActive })}
-                      >
-                        {p.isActive ? "Deactivate" : "Activate"}
-                      </button>
-                      <button
-                        className="admin__delete-btn"
-                        onClick={() => { if (confirm(`Delete "${p.name}"?`)) deleteProduct({ adminSecret, id: p._id }); }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
+          <div className="admin__table-wrap">
+            <table className="admin__table">
+              <thead>
+                <tr>
+                  <th>Image</th>
+                  <th>Name</th>
+                  <th>Price</th>
+                  <th>Stock</th>
+                  <th>Active</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {products.map((p) => (
+                  <tr key={p._id}>
+                    <td>
+                      {p.images && p.images.length > 0 ? (
+                        <img
+                          src={p.images[0]}
+                          alt=""
+                          style={{ width: 40, height: 40, objectFit: "cover", border: "1px solid var(--fg)" }}
+                        />
+                      ) : (
+                        <span style={{ color: "var(--muted)", fontSize: "0.6rem" }}>—</span>
+                      )}
+                    </td>
+                    <td>{p.name}</td>
+                    <td>${(p.price / 100).toFixed(2)}</td>
+                    <td>{p.stock}</td>
+                    <td>{p.isActive ? "Yes" : "No"}</td>
+                    <td>
+                      <div className="admin__table-actions">
+                        <button
+                          className="admin__action-btn"
+                          onClick={() => startEdit(p)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="admin__action-btn"
+                          onClick={() => updateProduct({ adminSecret, id: p._id, isActive: !p.isActive })}
+                        >
+                          {p.isActive ? "Deactivate" : "Activate"}
+                        </button>
+                        <button
+                          className="admin__delete-btn"
+                          onClick={() => { if (confirm(`Delete "${p.name}"?`)) deleteProduct({ adminSecret, id: p._id }); }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 
