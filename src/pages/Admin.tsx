@@ -37,6 +37,8 @@ export default function Admin() {
   const [loginError, setLoginError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
 
+  const [newAdminEmail, setNewAdminEmail] = useState("");
+
   const products = useQuery(
     api.admin.listProducts,
     isAuthenticated ? {} : "skip",
@@ -54,6 +56,9 @@ export default function Admin() {
   const updateProduct = useMutation(api.admin.updateProduct);
   const deleteProduct = useMutation(api.admin.deleteProduct);
   const updateOrderStatus = useMutation(api.admin.updateOrderStatus);
+  const adminEmails = useQuery(api.admin.listAdminEmails, isAuthenticated ? {} : "skip");
+  const addAdminEmail = useMutation(api.admin.addAdminEmail);
+  const removeAdminEmail = useMutation(api.admin.removeAdminEmail);
   const generateUploadUrl = useMutation(api.upload.generateUploadUrl);
   const getImageUrl = useMutation(api.upload.getUrl);
 
@@ -631,6 +636,77 @@ export default function Admin() {
                   Next
                 </button>
               </div>
+            )}
+          </>
+        )}
+      </section>
+
+      <section className="admin__section">
+        <h2 className="admin__section-title">Admin Access</h2>
+        {adminEmails === undefined ? (
+          <p className="loading">Loading</p>
+        ) : (
+          <>
+            <form
+              className="admin__form"
+              style={{ flexDirection: "row", maxWidth: "500px", marginBottom: "1.25rem" }}
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!newAdminEmail.trim()) return;
+                try {
+                  await addAdminEmail({ email: newAdminEmail.trim() });
+                  setNewAdminEmail("");
+                } catch (err: any) {
+                  alert(err.message ?? "Failed to add admin");
+                }
+              }}
+            >
+              <input
+                placeholder="Email address"
+                type="email"
+                value={newAdminEmail}
+                onChange={(e) => setNewAdminEmail(e.target.value)}
+                required
+                style={{ flex: 1 }}
+              />
+              <button type="submit">Add Admin</button>
+            </form>
+
+            {adminEmails.envAdmins.length > 0 && (
+              <div style={{ marginBottom: "1rem" }}>
+                <div className="order-card__label">Seed Admins (env var)</div>
+                {adminEmails.envAdmins.map((email) => (
+                  <div key={email} className="admin__admin-row">
+                    <span>{email}</span>
+                    <span style={{ fontSize: "0.6rem", color: "var(--muted)" }}>env</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {adminEmails.dbAdmins.length > 0 && (
+              <div>
+                <div className="order-card__label">Added Admins</div>
+                {adminEmails.dbAdmins.map((admin) => (
+                  <div key={admin._id} className="admin__admin-row">
+                    <span>{admin.email}</span>
+                    <button
+                      className="admin__delete-btn"
+                      style={{ fontSize: "0.55rem", padding: "0.25rem 0.6rem" }}
+                      onClick={() => {
+                        if (confirm(`Remove admin access for ${admin.email}?`))
+                          removeAdminEmail({ id: admin._id });
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {adminEmails.dbAdmins.length === 0 && adminEmails.envAdmins.length === 0 && (
+              <p className="admin__no-orders">No admins configured.</p>
             )}
           </>
         )}

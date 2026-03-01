@@ -4,8 +4,17 @@ import { v } from "convex/values";
 async function assertAdmin(ctx: QueryCtx | MutationCtx) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) throw new Error("Not authenticated");
-  const adminEmails = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim());
-  if (!adminEmails.includes(identity.email!)) throw new Error("Not authorized");
+  const email = identity.email!;
+  // Check env var seed admins
+  const envAdmins = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
+  if (envAdmins.includes(email)) return;
+  // Check DB admins
+  const dbAdmin = await ctx.db
+    .query("adminEmails")
+    .withIndex("by_email", (q) => q.eq("email", email))
+    .first();
+  if (dbAdmin) return;
+  throw new Error("Not authorized");
 }
 
 export const listProducts = query({
@@ -108,5 +117,48 @@ export const updateOrderStatus = mutation({
   handler: async (ctx, args) => {
     await assertAdmin(ctx);
     await ctx.db.patch(args.id, { status: args.status });
+  },
+});
+
+export const listAdminEmails = query({
+  args: {},
+  handler: async (ctx) => {
+    await assertAdmin(ctx);
+    const envAdmins = (process.env.ADMIN_EMAILS ?? "")
+      .split(",")
+      .map((e) => e.trim())
+      .filter(Boolean);
+    const dbAdmins = await ctx.db.query("adminEmails").collect();
+    return {
+      envAdmins,
+      dbAdmins: dbAdmins.map((a) => ({ _id: a._id, email: a.email, addedAt: a.addedAt })),
+    };
+  },
+});
+
+export const addAdminEmail = mutation({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    await assertAdmin(ctx);
+    const email = args.email.trim().toLowerCase();
+    if (!email) throw new Error("Email is required");
+    // Check if already exists in DB
+    const existing = await ctx.db
+      .query("adminEmails")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .first();
+    if (existing) throw new Error("Email already an admin");
+    return await ctx.db.insert("adminEmails", {
+      email,
+      addedAt: Date.now(),
+    });
+  },
+});
+
+export const removeAdminEmail = mutation({
+  args: { id: v.id("adminEmails") },
+  handler: async (ctx, args) => {
+    await assertAdmin(ctx);
+    await ctx.db.delete(args.id);
   },
 });

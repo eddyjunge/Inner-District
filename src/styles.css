@@ -1170,6 +1170,15 @@ select {
   color: var(--bg);
 }
 
+.admin__admin-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
+  font-size: 0.8rem;
+}
+
 /* ========================================
    UPLOAD ZONE
    ======================================== */

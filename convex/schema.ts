@@ -58,6 +58,11 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_email", ["email"]),
 
+  adminEmails: defineTable({
+    email: v.string(),
+    addedAt: v.number(),
+  }).index("by_email", ["email"]),
+
   exchangeRates: defineTable({
     baseCurrency: v.string(),
     rates: v.any(),
