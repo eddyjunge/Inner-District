@@ -39,7 +39,7 @@ export const createDemoOrder = mutation({
         price: product.price,
         quantity: item.quantity,
         productType: (product.productType ?? "physical") as "physical" | "digital",
-        downloadUrl: product.downloadUrl,
+        downloadFileId: product.downloadFileId,
         licenseKey: product.licenseKey,
       });
       subtotal += product.price * item.quantity;

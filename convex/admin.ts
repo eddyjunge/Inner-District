@@ -53,7 +53,7 @@ export const createProduct = mutation({
     category: v.string(),
     stock: v.number(),
     productType: v.optional(v.union(v.literal("physical"), v.literal("digital"))),
-    downloadUrl: v.optional(v.string()),
+    downloadFileId: v.optional(v.id("_storage")),
     licenseKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -79,7 +79,7 @@ export const updateProduct = mutation({
     stock: v.optional(v.number()),
     isActive: v.optional(v.boolean()),
     productType: v.optional(v.union(v.literal("physical"), v.literal("digital"))),
-    downloadUrl: v.optional(v.string()),
+    downloadFileId: v.optional(v.id("_storage")),
     licenseKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {

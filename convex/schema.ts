@@ -12,7 +12,7 @@ export default defineSchema({
     stock: v.number(),
     isActive: v.boolean(),
     productType: v.optional(v.union(v.literal("physical"), v.literal("digital"))),
-    downloadUrl: v.optional(v.string()),
+    downloadFileId: v.optional(v.id("_storage")),
     licenseKey: v.optional(v.string()),
   }).index("by_category", ["category"])
     .index("by_isActive", ["isActive"]),
@@ -28,7 +28,7 @@ export default defineSchema({
         price: v.number(),
         quantity: v.number(),
         productType: v.optional(v.union(v.literal("physical"), v.literal("digital"))),
-        downloadUrl: v.optional(v.string()),
+        downloadFileId: v.optional(v.id("_storage")),
         licenseKey: v.optional(v.string()),
       }),
     ),

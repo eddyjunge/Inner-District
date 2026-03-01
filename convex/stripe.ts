@@ -49,7 +49,7 @@ export const createCheckoutSession = action({
         if (product.stock < item.quantity) {
           throw new Error(`Insufficient stock for ${product.name}`);
         }
-        return { _id: product._id, name: product.name, price: product.price, stripePriceId: product.stripePriceId, quantity: item.quantity, productType: (product.productType ?? "physical") as "physical" | "digital", downloadUrl: product.downloadUrl, licenseKey: product.licenseKey };
+        return { _id: product._id, name: product.name, price: product.price, stripePriceId: product.stripePriceId, quantity: item.quantity, productType: (product.productType ?? "physical") as "physical" | "digital", downloadFileId: product.downloadFileId, licenseKey: product.licenseKey };
       }),
     );
 
@@ -83,7 +83,7 @@ export const createCheckoutSession = action({
           price: p.price,
           quantity: p.quantity,
           productType: p.productType,
-          downloadUrl: p.downloadUrl,
+          downloadFileId: p.downloadFileId,
           licenseKey: p.licenseKey,
         })),
         shippingAddress: args.shippingAddress,
