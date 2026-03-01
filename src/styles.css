@@ -1065,6 +1065,166 @@ select {
 }
 
 /* ========================================
+   ADMIN: DIGITAL GOODS
+   ======================================== */
+
+.admin__form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.admin__label {
+  font-size: 0.55rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--muted);
+}
+
+.admin__radio-group {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.admin__radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.admin__radio-group input[type="radio"] {
+  accent-color: var(--fg);
+}
+
+.admin__type-badge {
+  display: inline-block;
+  font-size: 0.5rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--fg);
+}
+
+.admin__type-badge--digital {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.admin__type-badge--physical {
+  background: transparent;
+  color: var(--fg);
+}
+
+.admin__file-upload {
+  border: 2px dashed var(--fg);
+  padding: 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.1s;
+}
+
+.admin__file-upload:hover {
+  border-color: var(--accent);
+  border-style: solid;
+}
+
+.admin__file-upload-text {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+}
+
+.admin__file-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  border: var(--border);
+  font-size: 0.75rem;
+}
+
+.admin__file-name {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  word-break: break-all;
+}
+
+.admin__file-remove {
+  font-size: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  cursor: pointer;
+}
+
+.admin__file-remove:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ========================================
+   SUCCESS PAGE: DIGITAL DOWNLOADS
+   ======================================== */
+
+.status-page__digital {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: var(--border);
+}
+
+.status-page__subtitle {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.status-page__digital-item {
+  margin-bottom: 1.25rem;
+}
+
+.status-page__download-link {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  padding: 0.5rem 1rem;
+  background: var(--fg);
+  color: var(--bg);
+  text-decoration: none;
+  border: var(--border);
+  margin-top: 0.35rem;
+  transition: background 0.1s;
+}
+
+.status-page__download-link:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.status-page__license {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  margin-top: 0.35rem;
+}
+
+.status-page__license code {
+  background: var(--fg);
+  color: var(--bg);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+/* ========================================
    RESPONSIVE
    ======================================== */
 
