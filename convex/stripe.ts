@@ -4,6 +4,7 @@ import { action, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import Stripe from "stripe";
+import { getShippingRate, getVatRate, extractVat } from "./euConfig";
 
 function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -59,7 +60,9 @@ export const createCheckoutSession = action({
     }));
 
     // Get shipping rate from env
-    const shippingAmount = parseInt(process.env.SHIPPING_RATE_CENTS ?? "500");
+    const countryCode = args.shippingAddress.country;
+    const shippingAmount = getShippingRate(countryCode);
+    const vatRate = getVatRate(countryCode);
 
     // Compute totals server-side
     const subtotal = validatedItems.reduce(
@@ -67,6 +70,7 @@ export const createCheckoutSession = action({
       0,
     );
     const total = subtotal + shippingAmount;
+    const vatAmount = extractVat(total, vatRate);
 
     // Create a pending order in Convex BEFORE creating Stripe session
     const pendingOrderId = await ctx.runMutation(
@@ -82,6 +86,8 @@ export const createCheckoutSession = action({
         subtotal,
         shipping: shippingAmount,
         total,
+        vatRate,
+        vatAmount,
         email: args.email,
       },
     );
@@ -103,8 +109,8 @@ export const createCheckoutSession = action({
         {
           shipping_rate_data: {
             type: "fixed_amount",
-            fixed_amount: { amount: shippingAmount, currency: "usd" },
-            display_name: "Standard Shipping",
+            fixed_amount: { amount: shippingAmount, currency: "eur" },
+            display_name: countryCode === "DE" ? "Versand (Deutschland)" : "Versand (EU)",
           },
         },
       ],

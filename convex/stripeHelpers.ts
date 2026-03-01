@@ -30,6 +30,8 @@ export const createPendingOrder = internalMutation({
     subtotal: v.number(),
     shipping: v.number(),
     total: v.number(),
+    vatRate: v.number(),
+    vatAmount: v.number(),
     email: v.string(),
   },
   handler: async (ctx, args) => {
@@ -40,6 +42,8 @@ export const createPendingOrder = internalMutation({
       subtotal: args.subtotal,
       shipping: args.shipping,
       total: args.total,
+      vatRate: args.vatRate,
+      vatAmount: args.vatAmount,
       shippingAddress: args.shippingAddress,
       status: "pending",
       createdAt: Date.now(),
