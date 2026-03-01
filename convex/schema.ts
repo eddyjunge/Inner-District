@@ -29,6 +29,8 @@ export default defineSchema({
     subtotal: v.number(),
     shipping: v.number(),
     total: v.number(),
+    vatRate: v.optional(v.number()),
+    vatAmount: v.optional(v.number()),
     shippingAddress: v.object({
       name: v.string(),
       line1: v.string(),
