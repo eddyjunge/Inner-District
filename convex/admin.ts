@@ -1,32 +1,24 @@
-import { query, mutation, QueryCtx, MutationCtx } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
-async function assertAdmin(ctx: QueryCtx | MutationCtx) {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) throw new Error("Not authenticated");
-  const email = identity.email!;
-  // Check env var seed admins
-  const envAdmins = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
-  if (envAdmins.includes(email)) return;
-  // Check DB admins
-  const dbAdmin = await ctx.db
-    .query("adminEmails")
-    .withIndex("by_email", (q) => q.eq("email", email))
-    .first();
-  if (dbAdmin) return;
-  throw new Error("Not authorized");
+function assertAdmin(adminSecret: string) {
+  const expected = process.env.ADMIN_SECRET;
+  if (!expected || adminSecret !== expected) {
+    throw new Error("Not authorized");
+  }
 }
 
 export const listProducts = query({
-  args: {},
-  handler: async (ctx) => {
-    await assertAdmin(ctx);
+  args: { adminSecret: v.string() },
+  handler: async (ctx, args) => {
+    assertAdmin(args.adminSecret);
     return await ctx.db.query("products").collect();
   },
 });
 
 export const listOrders = query({
   args: {
+    adminSecret: v.string(),
     status: v.optional(
       v.union(
         v.literal("pending"),
@@ -38,7 +30,7 @@ export const listOrders = query({
     ),
   },
   handler: async (ctx, args) => {
-    await assertAdmin(ctx);
+    assertAdmin(args.adminSecret);
     if (args.status) {
       return await ctx.db
         .query("orders")
@@ -52,6 +44,7 @@ export const listOrders = query({
 
 export const createProduct = mutation({
   args: {
+    adminSecret: v.string(),
     name: v.string(),
     description: v.string(),
     price: v.number(),
@@ -63,9 +56,10 @@ export const createProduct = mutation({
     downloadFileId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args) => {
-    await assertAdmin(ctx);
+    assertAdmin(args.adminSecret);
+    const { adminSecret: _, ...rest } = args;
     return await ctx.db.insert("products", {
-      ...args,
+      ...rest,
       isActive: true,
     });
   },
@@ -73,6 +67,7 @@ export const createProduct = mutation({
 
 export const updateProduct = mutation({
   args: {
+    adminSecret: v.string(),
     id: v.id("products"),
     name: v.optional(v.string()),
     description: v.optional(v.string()),
@@ -86,8 +81,8 @@ export const updateProduct = mutation({
     downloadFileId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args) => {
-    await assertAdmin(ctx);
-    const { id, ...updates } = args;
+    assertAdmin(args.adminSecret);
+    const { id, adminSecret: _, ...updates } = args;
     const filtered = Object.fromEntries(
       Object.entries(updates).filter(([, v]) => v !== undefined),
     );
@@ -97,16 +92,18 @@ export const updateProduct = mutation({
 
 export const deleteProduct = mutation({
   args: {
+    adminSecret: v.string(),
     id: v.id("products"),
   },
   handler: async (ctx, args) => {
-    await assertAdmin(ctx);
+    assertAdmin(args.adminSecret);
     await ctx.db.delete(args.id);
   },
 });
 
 export const updateOrderStatus = mutation({
   args: {
+    adminSecret: v.string(),
     id: v.id("orders"),
     status: v.union(
       v.literal("shipped"),
@@ -115,15 +112,15 @@ export const updateOrderStatus = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    await assertAdmin(ctx);
+    assertAdmin(args.adminSecret);
     await ctx.db.patch(args.id, { status: args.status });
   },
 });
 
 export const listAdminEmails = query({
-  args: {},
-  handler: async (ctx) => {
-    await assertAdmin(ctx);
+  args: { adminSecret: v.string() },
+  handler: async (ctx, args) => {
+    assertAdmin(args.adminSecret);
     const envAdmins = (process.env.ADMIN_EMAILS ?? "")
       .split(",")
       .map((e) => e.trim())
@@ -137,9 +134,9 @@ export const listAdminEmails = query({
 });
 
 export const addAdminEmail = mutation({
-  args: { email: v.string() },
+  args: { adminSecret: v.string(), email: v.string() },
   handler: async (ctx, args) => {
-    await assertAdmin(ctx);
+    assertAdmin(args.adminSecret);
     const email = args.email.trim().toLowerCase();
     if (!email) throw new Error("Email is required");
     // Check if already exists in DB
@@ -156,9 +153,9 @@ export const addAdminEmail = mutation({
 });
 
 export const removeAdminEmail = mutation({
-  args: { id: v.id("adminEmails") },
+  args: { adminSecret: v.string(), id: v.id("adminEmails") },
   handler: async (ctx, args) => {
-    await assertAdmin(ctx);
+    assertAdmin(args.adminSecret);
     await ctx.db.delete(args.id);
   },
 });

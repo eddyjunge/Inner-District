@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, Fragment } from "react";
-import { useQuery, useMutation, useConvexAuth } from "convex/react";
-import { useAuthActions } from "@convex-dev/auth/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 
@@ -29,20 +28,17 @@ const emptyForm: ProductForm = {
 };
 
 export default function Admin() {
-  const { isAuthenticated, isLoading } = useConvexAuth();
-  const { signIn, signOut } = useAuthActions();
-
-  const [loginEmail, setLoginEmail] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
-  const [loginError, setLoginError] = useState("");
-  const [loginLoading, setLoginLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [adminSecret, setAdminSecret] = useState(
+    () => sessionStorage.getItem("adminSecret") ?? "",
+  );
+  const [secretInput, setSecretInput] = useState("");
+  const authenticated = adminSecret.length > 0;
 
   const [newAdminEmail, setNewAdminEmail] = useState("");
 
   const products = useQuery(
     api.admin.listProducts,
-    isAuthenticated ? {} : "skip",
+    authenticated ? { adminSecret } : "skip",
   );
   const [orderStatusFilter, setOrderStatusFilter] = useState<string>("all");
   const [ordersPage, setOrdersPage] = useState(0);
@@ -51,13 +47,13 @@ export default function Admin() {
 
   const orders = useQuery(
     api.admin.listOrders,
-    isAuthenticated ? { status: orderStatusFilter !== "all" ? orderStatusFilter as any : undefined } : "skip",
+    authenticated ? { adminSecret, status: orderStatusFilter !== "all" ? orderStatusFilter as any : undefined } : "skip",
   );
   const createProduct = useMutation(api.admin.createProduct);
   const updateProduct = useMutation(api.admin.updateProduct);
   const deleteProduct = useMutation(api.admin.deleteProduct);
   const updateOrderStatus = useMutation(api.admin.updateOrderStatus);
-  const adminEmails = useQuery(api.admin.listAdminEmails, isAuthenticated ? {} : "skip");
+  const adminEmails = useQuery(api.admin.listAdminEmails, authenticated ? { adminSecret } : "skip");
   const addAdminEmail = useMutation(api.admin.addAdminEmail);
   const removeAdminEmail = useMutation(api.admin.removeAdminEmail);
   const generateUploadUrl = useMutation(api.upload.generateUploadUrl);
@@ -128,65 +124,29 @@ export default function Admin() {
     setImageUrls([]);
   };
 
-  if (isLoading) {
-    return <p className="loading">Loading</p>;
-  }
-
-  if (!isAuthenticated) {
+  if (!authenticated) {
     return (
       <div className="login">
         <h1 className="login__title">Admin</h1>
         <form
           className="login__form"
-          onSubmit={async (e) => {
+          onSubmit={(e) => {
             e.preventDefault();
-            setLoginError("");
-            setLoginLoading(true);
-            try {
-              await signIn("password", {
-                email: loginEmail,
-                password: loginPassword,
-                flow: isSignUp ? "signUp" : "signIn",
-              });
-            } catch (err: any) {
-              const msg = err?.message ?? String(err);
-              setLoginError(msg);
-            }
-            setLoginLoading(false);
+            sessionStorage.setItem("adminSecret", secretInput);
+            setAdminSecret(secretInput);
           }}
         >
           <input
-            type="email"
-            placeholder="Email"
-            value={loginEmail}
-            onChange={(e) => setLoginEmail(e.target.value)}
-            required
-          />
-          <input
             type="password"
-            placeholder="Password"
-            value={loginPassword}
-            onChange={(e) => setLoginPassword(e.target.value)}
+            placeholder="Admin Secret"
+            value={secretInput}
+            onChange={(e) => setSecretInput(e.target.value)}
             required
           />
-          {loginError && <p className="login__error">{loginError}</p>}
-          <button type="submit" className="login__btn" disabled={loginLoading}>
-            {loginLoading ? (isSignUp ? "Creating account..." : "Signing in...") : (isSignUp ? "Create Account" : "Sign In")}
+          <button type="submit" className="login__btn">
+            Sign In
           </button>
         </form>
-        <button
-          className="login__toggle"
-          onClick={() => { setIsSignUp((v) => !v); setLoginError(""); }}
-        >
-          {isSignUp ? "Already have an account? Sign in" : "First time? Create an account"}
-        </button>
-        <div className="login__divider">or</div>
-        <button
-          className="login__btn login__btn--google"
-          onClick={() => void signIn("google")}
-        >
-          Sign in with Google
-        </button>
       </div>
     );
   }
@@ -195,6 +155,7 @@ export default function Admin() {
     e.preventDefault();
     if (editingId) {
       await updateProduct({
+        adminSecret,
         id: editingId,
         name: form.name,
         description: form.description,
@@ -209,6 +170,7 @@ export default function Admin() {
       setEditingId(null);
     } else {
       await createProduct({
+        adminSecret,
         name: form.name,
         description: form.description,
         price: Math.round(parseFloat(form.price) * 100),
@@ -250,7 +212,7 @@ export default function Admin() {
     <div className="admin">
       <div className="admin__header">
         <h1 className="admin__title">Admin Dashboard</h1>
-        <button className="admin__logout-btn" onClick={() => void signOut()}>
+        <button className="admin__logout-btn" onClick={() => { sessionStorage.removeItem("adminSecret"); setAdminSecret(""); }}>
           Logout
         </button>
       </div>
@@ -446,13 +408,13 @@ export default function Admin() {
                         </button>
                         <button
                           className="admin__action-btn"
-                          onClick={() => updateProduct({ id: p._id, isActive: !p.isActive })}
+                          onClick={() => updateProduct({ adminSecret, id: p._id, isActive: !p.isActive })}
                         >
                           {p.isActive ? "Deactivate" : "Activate"}
                         </button>
                         <button
                           className="admin__delete-btn"
-                          onClick={() => { if (confirm(`Delete "${p.name}"?`)) deleteProduct({ id: p._id }); }}
+                          onClick={() => { if (confirm(`Delete "${p.name}"?`)) deleteProduct({ adminSecret, id: p._id }); }}
                         >
                           Delete
                         </button>
@@ -539,17 +501,17 @@ export default function Admin() {
                             <td>
                               <div className="admin__table-actions" onClick={(e) => e.stopPropagation()}>
                                 {order.status === "paid" && !allDigital && (
-                                  <button className="admin__action-btn" onClick={() => updateOrderStatus({ id: order._id, status: "shipped" })}>
+                                  <button className="admin__action-btn" onClick={() => updateOrderStatus({ adminSecret, id: order._id, status: "shipped" })}>
                                     Ship
                                   </button>
                                 )}
                                 {order.status === "shipped" && (
-                                  <button className="admin__action-btn" onClick={() => updateOrderStatus({ id: order._id, status: "delivered" })}>
+                                  <button className="admin__action-btn" onClick={() => updateOrderStatus({ adminSecret, id: order._id, status: "delivered" })}>
                                     Deliver
                                   </button>
                                 )}
                                 {(order.status === "paid" || order.status === "shipped") && !allDigital && (
-                                  <button className="admin__delete-btn" onClick={() => { if (confirm("Cancel this order?")) updateOrderStatus({ id: order._id, status: "cancelled" }); }}>
+                                  <button className="admin__delete-btn" onClick={() => { if (confirm("Cancel this order?")) updateOrderStatus({ adminSecret, id: order._id, status: "cancelled" }); }}>
                                     Cancel
                                   </button>
                                 )}
@@ -666,7 +628,7 @@ export default function Admin() {
                 e.preventDefault();
                 if (!newAdminEmail.trim()) return;
                 try {
-                  await addAdminEmail({ email: newAdminEmail.trim() });
+                  await addAdminEmail({ adminSecret, email: newAdminEmail.trim() });
                   setNewAdminEmail("");
                 } catch (err: any) {
                   alert(err.message ?? "Failed to add admin");
@@ -707,7 +669,7 @@ export default function Admin() {
                       style={{ fontSize: "0.55rem", padding: "0.25rem 0.6rem" }}
                       onClick={() => {
                         if (confirm(`Remove admin access for ${admin.email}?`))
-                          removeAdminEmail({ id: admin._id });
+                          removeAdminEmail({ adminSecret, id: admin._id });
                       }}
                     >
                       Remove
