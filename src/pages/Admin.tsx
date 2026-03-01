@@ -10,6 +10,9 @@ interface ProductForm {
   stripePriceId: string;
   category: string;
   stock: string;
+  productType: "physical" | "digital";
+  downloadUrl: string;
+  licenseKey: string;
 }
 
 const emptyForm: ProductForm = {
@@ -19,6 +22,9 @@ const emptyForm: ProductForm = {
   stripePriceId: "",
   category: "",
   stock: "",
+  productType: "physical",
+  downloadUrl: "",
+  licenseKey: "",
 };
 
 export default function Admin() {
@@ -80,6 +86,9 @@ export default function Admin() {
       stripePriceId: p.stripePriceId,
       category: p.category,
       stock: String(p.stock),
+      productType: (p.productType as "physical" | "digital") ?? "physical",
+      downloadUrl: p.downloadUrl ?? "",
+      licenseKey: p.licenseKey ?? "",
     });
     setImageUrls(p.images || []);
     formRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -129,6 +138,9 @@ export default function Admin() {
         images: imageUrls,
         category: form.category,
         stock: parseInt(form.stock),
+        productType: form.productType,
+        downloadUrl: form.productType === "digital" && form.downloadUrl ? form.downloadUrl : undefined,
+        licenseKey: form.productType === "digital" && form.licenseKey ? form.licenseKey : undefined,
       });
       setEditingId(null);
     } else {
@@ -141,6 +153,9 @@ export default function Admin() {
         images: imageUrls,
         category: form.category,
         stock: parseInt(form.stock),
+        productType: form.productType,
+        downloadUrl: form.productType === "digital" && form.downloadUrl ? form.downloadUrl : undefined,
+        licenseKey: form.productType === "digital" && form.licenseKey ? form.licenseKey : undefined,
       });
     }
     setForm(emptyForm);
@@ -184,6 +199,47 @@ export default function Admin() {
           <input placeholder="Stripe Price ID (price_xxx)" value={form.stripePriceId} onChange={(e) => setForm((p) => ({ ...p, stripePriceId: e.target.value }))} required />
           <input placeholder="Category" value={form.category} onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))} required />
           <input placeholder="Stock" type="number" value={form.stock} onChange={(e) => setForm((p) => ({ ...p, stock: e.target.value }))} required />
+
+          <div className="admin__form-row">
+            <label className="admin__label">Product Type</label>
+            <div className="admin__radio-group">
+              <label>
+                <input
+                  type="radio"
+                  name="productType"
+                  value="physical"
+                  checked={form.productType === "physical"}
+                  onChange={() => setForm((p) => ({ ...p, productType: "physical" }))}
+                />
+                {" "}Physical
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="productType"
+                  value="digital"
+                  checked={form.productType === "digital"}
+                  onChange={() => setForm((p) => ({ ...p, productType: "digital" }))}
+                />
+                {" "}Digital
+              </label>
+            </div>
+          </div>
+
+          {form.productType === "digital" && (
+            <>
+              <input
+                placeholder="Download URL (optional)"
+                value={form.downloadUrl}
+                onChange={(e) => setForm((p) => ({ ...p, downloadUrl: e.target.value }))}
+              />
+              <input
+                placeholder="License Key (optional)"
+                value={form.licenseKey}
+                onChange={(e) => setForm((p) => ({ ...p, licenseKey: e.target.value }))}
+              />
+            </>
+          )}
 
           <div
             className={`upload-zone${dragActive ? " upload-zone--active" : ""}`}
@@ -257,6 +313,7 @@ export default function Admin() {
                   <th>Name</th>
                   <th>Price</th>
                   <th>Stock</th>
+                  <th>Type</th>
                   <th>Active</th>
                   <th>Actions</th>
                 </tr>
@@ -278,6 +335,11 @@ export default function Admin() {
                     <td>{p.name}</td>
                     <td>€{(p.price / 100).toFixed(2)}</td>
                     <td>{p.stock}</td>
+                    <td>
+                      <span className={`admin__type-badge admin__type-badge--${(p.productType ?? "physical")}`}>
+                        {(p.productType ?? "physical")}
+                      </span>
+                    </td>
                     <td>{p.isActive ? "Yes" : "No"}</td>
                     <td>
                       <div className="admin__table-actions">
