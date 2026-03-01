@@ -343,13 +343,19 @@ export default function Admin() {
                       {order.items.map((item: any, idx: number) => (
                         <div key={idx} className="order-card__item">
                           <span>{item.name} &times; {item.quantity}</span>
-                          <span>${((item.price * item.quantity) / 100).toFixed(2)}</span>
+                          <span>€{((item.price * item.quantity) / 100).toFixed(2)}</span>
                         </div>
                       ))}
                       <div className="order-card__item order-card__item--total">
                         <span>Total</span>
-                        <span>${(order.total / 100).toFixed(2)}</span>
+                        <span>€{(order.total / 100).toFixed(2)}</span>
                       </div>
+                      {order.vatRate != null && (
+                        <div className="order-card__item" style={{ color: "var(--muted)", fontSize: "0.7rem" }}>
+                          <span>inkl. {order.vatRate}% MwSt</span>
+                          <span>€{((order.vatAmount ?? 0) / 100).toFixed(2)}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
