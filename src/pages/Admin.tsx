@@ -36,6 +36,7 @@ export default function Admin() {
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
 
   const [newAdminEmail, setNewAdminEmail] = useState("");
 
@@ -142,9 +143,17 @@ export default function Admin() {
             setLoginError("");
             setLoginLoading(true);
             try {
-              await signIn("password", { email: loginEmail, password: loginPassword, flow: "signIn" });
+              await signIn("password", {
+                email: loginEmail,
+                password: loginPassword,
+                flow: isSignUp ? "signUp" : "signIn",
+              });
             } catch {
-              setLoginError("Invalid credentials or not authorized.");
+              setLoginError(
+                isSignUp
+                  ? "Could not create account. Try a stronger password."
+                  : "Invalid credentials or account not found.",
+              );
             }
             setLoginLoading(false);
           }}
@@ -165,9 +174,15 @@ export default function Admin() {
           />
           {loginError && <p className="login__error">{loginError}</p>}
           <button type="submit" className="login__btn" disabled={loginLoading}>
-            {loginLoading ? "Signing in..." : "Sign In"}
+            {loginLoading ? (isSignUp ? "Creating account..." : "Signing in...") : (isSignUp ? "Create Account" : "Sign In")}
           </button>
         </form>
+        <button
+          className="login__toggle"
+          onClick={() => { setIsSignUp((v) => !v); setLoginError(""); }}
+        >
+          {isSignUp ? "Already have an account? Sign in" : "First time? Create an account"}
+        </button>
         <div className="login__divider">or</div>
         <button
           className="login__btn login__btn--google"
