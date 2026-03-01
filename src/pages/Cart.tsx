@@ -44,7 +44,7 @@ export default function Cart() {
           <div>
             <div className="cart-item__name">{product.name}</div>
             <div className="cart-item__price">
-              ${(product.price / 100).toFixed(2)} each
+              €{(product.price / 100).toFixed(2)} each
               {quantity >= product.stock && (
                 <span className="cart-item__limit"> · max reached</span>
               )}
@@ -76,7 +76,7 @@ export default function Cart() {
       ))}
       <div className="cart__footer">
         <p className="cart__subtotal">
-          Subtotal: ${(subtotal / 100).toFixed(2)}
+          Subtotal: €{(subtotal / 100).toFixed(2)}
         </p>
         <Link to="/checkout">
           <button className="cart__checkout-btn">Proceed to Checkout</button>

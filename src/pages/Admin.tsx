@@ -180,7 +180,7 @@ export default function Admin() {
         <form ref={formRef} onSubmit={handleSubmit} className="admin__form">
           <input placeholder="Name" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} required />
           <input placeholder="Description" value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} required />
-          <input placeholder="Price (dollars, e.g. 19.99)" value={form.price} onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))} required />
+          <input placeholder="Price (EUR, e.g. 19.99)" value={form.price} onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))} required />
           <input placeholder="Stripe Price ID (price_xxx)" value={form.stripePriceId} onChange={(e) => setForm((p) => ({ ...p, stripePriceId: e.target.value }))} required />
           <input placeholder="Category" value={form.category} onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))} required />
           <input placeholder="Stock" type="number" value={form.stock} onChange={(e) => setForm((p) => ({ ...p, stock: e.target.value }))} required />
@@ -276,7 +276,7 @@ export default function Admin() {
                       )}
                     </td>
                     <td>{p.name}</td>
-                    <td>${(p.price / 100).toFixed(2)}</td>
+                    <td>€{(p.price / 100).toFixed(2)}</td>
                     <td>{p.stock}</td>
                     <td>{p.isActive ? "Yes" : "No"}</td>
                     <td>

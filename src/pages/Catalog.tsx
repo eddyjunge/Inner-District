@@ -37,7 +37,7 @@ export default function Catalog() {
                 <div>
                   <h3 className="product-card__name">{product.name}</h3>
                   <p className="product-card__price">
-                    ${(product.price / 100).toFixed(2)}
+                    €{(product.price / 100).toFixed(2)}
                   </p>
                   <p className="product-card__stock">
                     {product.stock > 0 ? `${product.stock} in stock` : "Sold out"}

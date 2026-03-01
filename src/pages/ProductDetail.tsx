@@ -58,7 +58,7 @@ export default function ProductDetail() {
       <h1 className="product-detail__name">{product.name}</h1>
       <p className="product-detail__desc">{product.description}</p>
       <p className="product-detail__price">
-        ${(product.price / 100).toFixed(2)}
+        €{(product.price / 100).toFixed(2)}
       </p>
       <p className="product-detail__stock">
         {product.stock > 0 ? `${product.stock} in stock` : "Sold out"}
