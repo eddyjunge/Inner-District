@@ -1,7 +1,9 @@
+import { useEffect, useMemo } from "react";
 import { Link } from "react-router";
-import { useQuery } from "convex/react";
+import { useQuery, useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useCart } from "../lib/cart";
+import { detectUserCurrency, formatPrice } from "../lib/currencyDisplay";
 
 export default function Cart() {
   const { items, removeItem, updateQuantity, totalItems } = useCart();
@@ -10,6 +12,15 @@ export default function Cart() {
     api.products.getMultiple,
     productIds.length > 0 ? { ids: productIds } : "skip",
   );
+  const exchangeRates = useQuery(api.exchangeRates.getRates);
+  const refreshRates = useAction(api.exchangeRates.fetchAndCache);
+  const userCurrency = useMemo(() => detectUserCurrency(), []);
+
+  useEffect(() => {
+    refreshRates();
+  }, [refreshRates]);
+
+  const rates = exchangeRates?.rates ?? null;
 
   if (totalItems === 0) {
     return (
@@ -44,7 +55,7 @@ export default function Cart() {
           <div>
             <div className="cart-item__name">{product.name}</div>
             <div className="cart-item__price">
-              €{(product.price / 100).toFixed(2)} each
+              {formatPrice(product.price, rates, userCurrency)} each
               {quantity >= product.stock && (
                 <span className="cart-item__limit"> · max reached</span>
               )}
@@ -76,7 +87,7 @@ export default function Cart() {
       ))}
       <div className="cart__footer">
         <p className="cart__subtotal">
-          Subtotal: €{(subtotal / 100).toFixed(2)}
+          Subtotal: {formatPrice(subtotal, rates, userCurrency)}
         </p>
         <Link to="/checkout">
           <button className="cart__checkout-btn">Proceed to Checkout</button>

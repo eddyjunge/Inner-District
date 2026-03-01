@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router";
-import { useQuery } from "convex/react";
+import { useQuery, useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { useCart } from "../lib/cart";
+import { detectUserCurrency, formatPrice } from "../lib/currencyDisplay";
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -12,6 +13,15 @@ export default function ProductDetail() {
   });
   const { items, addItem } = useCart();
   const [activeImage, setActiveImage] = useState(0);
+  const exchangeRates = useQuery(api.exchangeRates.getRates);
+  const refreshRates = useAction(api.exchangeRates.fetchAndCache);
+  const userCurrency = useMemo(() => detectUserCurrency(), []);
+
+  useEffect(() => {
+    refreshRates();
+  }, [refreshRates]);
+
+  const rates = exchangeRates?.rates ?? null;
 
   if (product === undefined) return <p className="loading">Loading</p>;
 
@@ -58,7 +68,7 @@ export default function ProductDetail() {
       <h1 className="product-detail__name">{product.name}</h1>
       <p className="product-detail__desc">{product.description}</p>
       <p className="product-detail__price">
-        €{(product.price / 100).toFixed(2)}
+        {formatPrice(product.price, rates, userCurrency)}
       </p>
       <p className="product-detail__stock">
         {product.stock > 0 ? `${product.stock} in stock` : "Sold out"}

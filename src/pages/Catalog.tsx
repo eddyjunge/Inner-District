@@ -1,11 +1,22 @@
-import { useQuery } from "convex/react";
+import { useQuery, useAction } from "convex/react";
+import { useEffect, useMemo } from "react";
 import { api } from "../../convex/_generated/api";
 import { Link } from "react-router";
 import { useCart } from "../lib/cart";
+import { detectUserCurrency, formatPrice } from "../lib/currencyDisplay";
 
 export default function Catalog() {
   const products = useQuery(api.products.list);
   const { items, addItem } = useCart();
+  const exchangeRates = useQuery(api.exchangeRates.getRates);
+  const refreshRates = useAction(api.exchangeRates.fetchAndCache);
+  const userCurrency = useMemo(() => detectUserCurrency(), []);
+
+  useEffect(() => {
+    refreshRates();
+  }, [refreshRates]);
+
+  const rates = exchangeRates?.rates ?? null;
 
   if (products === undefined) return <p className="loading">Loading</p>;
 
@@ -37,7 +48,7 @@ export default function Catalog() {
                 <div>
                   <h3 className="product-card__name">{product.name}</h3>
                   <p className="product-card__price">
-                    €{(product.price / 100).toFixed(2)}
+                    {formatPrice(product.price, rates, userCurrency)}
                   </p>
                   <p className="product-card__stock">
                     {product.stock > 0 ? `${product.stock} in stock` : "Sold out"}
