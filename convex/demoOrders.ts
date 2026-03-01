@@ -1,5 +1,6 @@
 import { mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { getShippingRate, getVatRate, extractVat } from "./euConfig";
 
 export const createDemoOrder = mutation({
   args: {
@@ -51,6 +52,12 @@ export const createDemoOrder = mutation({
       }
     }
 
+    const countryCode = args.shippingAddress.country;
+    const shipping = getShippingRate(countryCode);
+    const vatRate = getVatRate(countryCode);
+    const total = subtotal + shipping;
+    const vatAmount = extractVat(total, vatRate);
+
     const demoSessionId = `demo_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
     const orderId = await ctx.db.insert("orders", {
@@ -58,8 +65,10 @@ export const createDemoOrder = mutation({
       stripeSessionId: demoSessionId,
       items: orderItems,
       subtotal,
-      shipping: 0,
-      total: subtotal,
+      shipping,
+      total,
+      vatRate,
+      vatAmount,
       shippingAddress: args.shippingAddress,
       status: "paid",
       createdAt: Date.now(),
