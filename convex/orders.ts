@@ -18,6 +18,8 @@ export const getBySessionId = query({
       subtotal: order.subtotal,
       shipping: order.shipping,
       total: order.total,
+      vatRate: order.vatRate,
+      vatAmount: order.vatAmount,
       status: order.status,
       createdAt: order.createdAt,
     };
