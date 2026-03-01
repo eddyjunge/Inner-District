@@ -29,16 +29,12 @@ export const getBySessionId = query({
 
 export const getOrderForDownload = internalQuery({
   args: {
-    orderId: v.string(),
+    orderId: v.id("orders"),
     email: v.string(),
   },
   handler: async (ctx, args) => {
-    try {
-      const order = await ctx.db.get(args.orderId as any);
-      if (!order || order.email !== args.email) return null;
-      return order;
-    } catch {
-      return null;
-    }
+    const order = await ctx.db.get(args.orderId);
+    if (!order || order.email !== args.email) return null;
+    return order;
   },
 });

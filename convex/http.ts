@@ -53,7 +53,7 @@ http.route({
 
     // Look up the order directly
     const order = await ctx.runQuery(internal.orders.getOrderForDownload, {
-      orderId,
+      orderId: orderId as any,
       email,
     });
 
