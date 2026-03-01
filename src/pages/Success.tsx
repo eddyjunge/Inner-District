@@ -24,13 +24,24 @@ export default function Success() {
       {order ? (
         <div>
           <p className="status-page__detail">
-            Total: ${(order.total / 100).toFixed(2)}
+            Subtotal: €{(order.subtotal / 100).toFixed(2)}
           </p>
+          <p className="status-page__detail">
+            Shipping: €{(order.shipping / 100).toFixed(2)}
+          </p>
+          <p className="status-page__detail">
+            <strong>Total: €{(order.total / 100).toFixed(2)}</strong>
+          </p>
+          {order.vatRate != null && order.vatAmount != null && (
+            <p className="status-page__detail" style={{ color: "var(--muted)" }}>
+              inkl. {order.vatRate}% MwSt: €{(order.vatAmount / 100).toFixed(2)}
+            </p>
+          )}
           <p className="status-page__detail">Status: {order.status}</p>
           <ul className="status-page__items">
             {order.items.map((item, i) => (
               <li key={i}>
-                {item.name} x{item.quantity} — ${(item.price / 100).toFixed(2)}
+                {item.name} x{item.quantity} — €{((item.price * item.quantity) / 100).toFixed(2)}
               </li>
             ))}
           </ul>
