@@ -9,6 +9,7 @@
  */
 
 import type * as admin from "../admin.js";
+import type * as auth from "../auth.js";
 import type * as demoOrders from "../demoOrders.js";
 import type * as euConfig from "../euConfig.js";
 import type * as exchangeRates from "../exchangeRates.js";
@@ -27,6 +28,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
+  auth: typeof auth;
   demoOrders: typeof demoOrders;
   euConfig: typeof euConfig;
   exchangeRates: typeof exchangeRates;
