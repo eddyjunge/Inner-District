@@ -733,7 +733,7 @@ select {
    ======================================== */
 
 .admin {
-  max-width: 900px;
+  max-width: 1100px;
 }
 
 .admin__title {
@@ -905,7 +905,7 @@ select {
 
 .order-card__columns {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 2rem;
   margin-bottom: 1.25rem;
 }
@@ -968,6 +968,134 @@ select {
 
 /* order card responsive handled in main responsive block */
 
+/* ========================================
+   ORDERS TABLE (Admin)
+   ======================================== */
+
+.admin__orders-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.admin__orders-filters {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.admin__filter-btn {
+  font-size: 0.6rem;
+  padding: 0.35rem 0.75rem;
+  background: transparent;
+  border: 1px solid var(--fg);
+  color: var(--fg);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-family: var(--font-display);
+  font-weight: 600;
+  transition: background 0.1s, color 0.1s;
+}
+
+.admin__filter-btn:hover {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.admin__filter-btn--active {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.admin__orders-count {
+  font-size: 0.65rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.admin__orders-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.admin__orders-table th {
+  font-family: var(--font-display);
+  font-size: 0.55rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--muted);
+  text-align: left;
+  padding: 0.6rem 0.5rem;
+  border-bottom: 2px solid var(--fg);
+}
+
+.admin__orders-table td {
+  padding: 0.6rem 0.5rem;
+  border-bottom: 1px solid #ddd;
+  vertical-align: middle;
+}
+
+.admin__order-row {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.admin__order-row:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.admin__order-row--expanded {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.admin__order-id {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.admin__order-detail-row td {
+  padding: 1.25rem 0.5rem;
+  background: rgba(0, 0, 0, 0.015);
+  border-bottom: 2px solid var(--fg);
+}
+
+.admin__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.admin__pagination button {
+  font-size: 0.6rem;
+  padding: 0.4rem 0.9rem;
+}
+
+.admin__pagination button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.admin__pagination-info {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.admin__type-badge--mixed {
+  background: var(--accent);
+  color: var(--bg);
+}
+
 /* Login */
 .login {
   max-width: 340px;
@@ -988,6 +1116,58 @@ select {
 .login__btn {
   width: 100%;
   margin-top: 0.5rem;
+}
+
+.login__btn--google {
+  background: transparent;
+  border: 1px solid var(--fg);
+  color: var(--fg);
+  width: 100%;
+}
+
+.login__btn--google:hover {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.login__divider {
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin: 1rem 0;
+}
+
+.login__error {
+  font-size: 0.75rem;
+  color: #c00;
+  margin: 0;
+}
+
+.admin__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.admin__logout-btn {
+  font-size: 0.6rem;
+  padding: 0.4rem 0.9rem;
+  background: transparent;
+  border: 1px solid var(--fg);
+  color: var(--fg);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+.admin__logout-btn:hover {
+  background: var(--fg);
+  color: var(--bg);
 }
 
 /* ========================================
@@ -1253,6 +1433,11 @@ select {
     align-self: flex-end;
   }
 
+  .admin__table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .admin__table {
     font-size: 0.75rem;
   }
@@ -1260,6 +1445,10 @@ select {
   .admin__table th,
   .admin__table td {
     padding: 0.5rem 0.4rem;
+  }
+
+  .admin__orders-table {
+    min-width: 600px;
   }
 
   .order-card__columns {
@@ -1456,6 +1645,15 @@ select {
     font-size: 0.7rem;
   }
 
+  .admin__orders-table {
+    font-size: 0.7rem;
+  }
+
+  .admin__orders-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .admin__form-actions {
     flex-direction: column;
   }
@@ -1497,6 +1695,9 @@ select {
   .status-page {
     max-width: 100%;
   }
+
+  .status-page__digital-item { word-break: break-word; }
+  .status-page__download-link { width: 100%; text-align: center; display: block; }
 
   /* Upload zone */
   .upload-zone {

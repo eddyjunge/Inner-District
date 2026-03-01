@@ -1,5 +1,6 @@
-import { useState, useRef, useCallback } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useState, useRef, useCallback, Fragment } from "react";
+import { useQuery, useMutation, useConvexAuth } from "convex/react";
+import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 
@@ -28,20 +29,26 @@ const emptyForm: ProductForm = {
 };
 
 export default function Admin() {
-  const [adminSecret, setAdminSecret] = useState(() =>
-    sessionStorage.getItem("admin-secret") ?? "",
-  );
-  const [authenticated, setAuthenticated] = useState(
-    () => !!sessionStorage.getItem("admin-secret"),
-  );
+  const { isAuthenticated, isLoading } = useConvexAuth();
+  const { signIn, signOut } = useAuthActions();
+
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
 
   const products = useQuery(
     api.admin.listProducts,
-    authenticated ? { adminSecret } : "skip",
+    isAuthenticated ? {} : "skip",
   );
+  const [orderStatusFilter, setOrderStatusFilter] = useState<string>("all");
+  const [ordersPage, setOrdersPage] = useState(0);
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+  const ORDERS_PER_PAGE = 20;
+
   const orders = useQuery(
     api.admin.listOrders,
-    authenticated ? { adminSecret } : "skip",
+    isAuthenticated ? { status: orderStatusFilter !== "all" ? orderStatusFilter as any : undefined } : "skip",
   );
   const createProduct = useMutation(api.admin.createProduct);
   const updateProduct = useMutation(api.admin.updateProduct);
@@ -115,27 +122,54 @@ export default function Admin() {
     setImageUrls([]);
   };
 
-  if (!authenticated) {
+  if (isLoading) {
+    return <p className="loading">Loading</p>;
+  }
+
+  if (!isAuthenticated) {
     return (
       <div className="login">
         <h1 className="login__title">Admin</h1>
         <form
           className="login__form"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            sessionStorage.setItem("admin-secret", adminSecret);
-            setAuthenticated(true);
+            setLoginError("");
+            setLoginLoading(true);
+            try {
+              await signIn("password", { email: loginEmail, password: loginPassword, flow: "signIn" });
+            } catch {
+              setLoginError("Invalid credentials or not authorized.");
+            }
+            setLoginLoading(false);
           }}
         >
           <input
-            type="password"
-            placeholder="Admin password"
-            value={adminSecret}
-            onChange={(e) => setAdminSecret(e.target.value)}
+            type="email"
+            placeholder="Email"
+            value={loginEmail}
+            onChange={(e) => setLoginEmail(e.target.value)}
             required
           />
-          <button type="submit" className="login__btn">Login</button>
+          <input
+            type="password"
+            placeholder="Password"
+            value={loginPassword}
+            onChange={(e) => setLoginPassword(e.target.value)}
+            required
+          />
+          {loginError && <p className="login__error">{loginError}</p>}
+          <button type="submit" className="login__btn" disabled={loginLoading}>
+            {loginLoading ? "Signing in..." : "Sign In"}
+          </button>
         </form>
+        <div className="login__divider">or</div>
+        <button
+          className="login__btn login__btn--google"
+          onClick={() => void signIn("google")}
+        >
+          Sign in with Google
+        </button>
       </div>
     );
   }
@@ -144,7 +178,6 @@ export default function Admin() {
     e.preventDefault();
     if (editingId) {
       await updateProduct({
-        adminSecret,
         id: editingId,
         name: form.name,
         description: form.description,
@@ -159,7 +192,6 @@ export default function Admin() {
       setEditingId(null);
     } else {
       await createProduct({
-        adminSecret,
         name: form.name,
         description: form.description,
         price: Math.round(parseFloat(form.price) * 100),
@@ -199,7 +231,12 @@ export default function Admin() {
 
   return (
     <div className="admin">
-      <h1 className="admin__title">Admin Dashboard</h1>
+      <div className="admin__header">
+        <h1 className="admin__title">Admin Dashboard</h1>
+        <button className="admin__logout-btn" onClick={() => void signOut()}>
+          Logout
+        </button>
+      </div>
 
       <section className="admin__section">
         <h2 className="admin__section-title">
@@ -392,13 +429,13 @@ export default function Admin() {
                         </button>
                         <button
                           className="admin__action-btn"
-                          onClick={() => updateProduct({ adminSecret, id: p._id, isActive: !p.isActive })}
+                          onClick={() => updateProduct({ id: p._id, isActive: !p.isActive })}
                         >
                           {p.isActive ? "Deactivate" : "Activate"}
                         </button>
                         <button
                           className="admin__delete-btn"
-                          onClick={() => { if (confirm(`Delete "${p.name}"?`)) deleteProduct({ adminSecret, id: p._id }); }}
+                          onClick={() => { if (confirm(`Delete "${p.name}"?`)) deleteProduct({ id: p._id }); }}
                         >
                           Delete
                         </button>
@@ -414,120 +451,188 @@ export default function Admin() {
 
       <section className="admin__section">
         <h2 className="admin__section-title">Orders</h2>
+        <div className="admin__orders-toolbar">
+          <div className="admin__orders-filters">
+            {["all", "paid", "shipped", "delivered", "cancelled"].map((s) => (
+              <button
+                key={s}
+                className={`admin__filter-btn${orderStatusFilter === s ? " admin__filter-btn--active" : ""}`}
+                onClick={() => { setOrderStatusFilter(s); setOrdersPage(0); }}
+              >
+                {s === "all" ? "All" : s.charAt(0).toUpperCase() + s.slice(1)}
+              </button>
+            ))}
+          </div>
+          {orders && (
+            <span className="admin__orders-count">{orders.length} order{orders.length !== 1 ? "s" : ""}</span>
+          )}
+        </div>
         {orders === undefined ? (
           <p className="loading">Loading</p>
         ) : orders.length === 0 ? (
           <p className="admin__no-orders">No orders yet.</p>
         ) : (
-          <div className="order-list">
-            {orders.map((order) => (
-              <div key={order._id} className="order-card">
-                <div className="order-card__header">
-                  <span className={`order-card__status order-card__status--${order.status}`}>
-                    {order.status}
-                  </span>
-                  <span className="order-card__date">
-                    {new Date(order.createdAt).toLocaleDateString(undefined, {
-                      year: "numeric", month: "short", day: "numeric",
-                    })}
-                    {" "}
-                    {new Date(order.createdAt).toLocaleTimeString(undefined, {
-                      hour: "2-digit", minute: "2-digit",
-                    })}
-                  </span>
-                </div>
-
-                <div className="order-card__id">#{order._id.slice(-8).toUpperCase()}</div>
-
-                <div className="order-card__columns">
-                  <div className="order-card__col">
-                    <div className="order-card__label">Items</div>
-                    <div className="order-card__items">
-                      {order.items.map((item: any, idx: number) => (
-                        <div key={idx} className="order-card__item">
-                          <span>
-                            {item.name} &times; {item.quantity}
-                            {(item.productType ?? "physical") === "digital" && (
-                              <span className="admin__type-badge admin__type-badge--digital" style={{ marginLeft: "0.5rem", fontSize: "0.6rem" }}>digital</span>
-                            )}
-                          </span>
-                          <span>€{((item.price * item.quantity) / 100).toFixed(2)}</span>
-                        </div>
-                      ))}
-                      <div className="order-card__item order-card__item--total">
-                        <span>Total</span>
-                        <span>€{(order.total / 100).toFixed(2)}</span>
-                      </div>
-                      {order.vatRate != null && (
-                        <div className="order-card__item" style={{ color: "var(--muted)", fontSize: "0.7rem" }}>
-                          <span>inkl. {order.vatRate}% MwSt</span>
-                          <span>€{((order.vatAmount ?? 0) / 100).toFixed(2)}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="order-card__col">
-                    <div className="order-card__label">Ship To</div>
-                    <div className="order-card__address">
-                      <p>{order.shippingAddress.name}</p>
-                      <p>{order.shippingAddress.line1}</p>
-                      {order.shippingAddress.line2 && <p>{order.shippingAddress.line2}</p>}
-                      <p>
-                        {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.postalCode}
-                      </p>
-                      <p>{order.shippingAddress.country}</p>
-                    </div>
-
-                    <div className="order-card__label" style={{ marginTop: "1rem" }}>Contact</div>
-                    <div className="order-card__email">{order.email}</div>
-                  </div>
-
-                  {order.items.some((item: any) => (item.productType ?? "physical") === "digital") && (
-                    <div className="order-card__col">
-                      <div className="order-card__label">Digital Delivery</div>
-                      {order.items
-                        .filter((item: any) => (item.productType ?? "physical") === "digital")
-                        .map((item: any, idx: number) => (
-                          <div key={idx} style={{ marginBottom: "0.5rem" }}>
-                            <div style={{ fontSize: "0.75rem", fontWeight: "bold" }}>{item.name}</div>
-                            {item.downloadFileId && (
-                              <div style={{ fontSize: "0.7rem", color: "var(--muted)" }}>
-                                File uploaded
+          <>
+            <div className="admin__table-wrap">
+              <table className="admin__orders-table">
+                <thead>
+                  <tr>
+                    <th>Order</th>
+                    <th>Date</th>
+                    <th>Customer</th>
+                    <th>Items</th>
+                    <th>Total</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders
+                    .slice(ordersPage * ORDERS_PER_PAGE, (ordersPage + 1) * ORDERS_PER_PAGE)
+                    .map((order) => {
+                      const isExpanded = expandedOrderId === order._id;
+                      const allDigital = order.items.every((item: any) => (item.productType ?? "physical") === "digital");
+                      const orderType = allDigital ? "digital" : order.items.some((item: any) => (item.productType ?? "physical") === "digital") ? "mixed" : "physical";
+                      return (
+                        <Fragment key={order._id}>
+                          <tr
+                            className={`admin__order-row${isExpanded ? " admin__order-row--expanded" : ""}`}
+                            onClick={() => setExpandedOrderId(isExpanded ? null : order._id)}
+                          >
+                            <td className="admin__order-id">#{order._id.slice(-8).toUpperCase()}</td>
+                            <td>
+                              {new Date(order.createdAt).toLocaleDateString(undefined, {
+                                month: "short", day: "numeric",
+                              })}
+                            </td>
+                            <td>{order.email}</td>
+                            <td>{order.items.reduce((s: number, i: any) => s + i.quantity, 0)}</td>
+                            <td>€{(order.total / 100).toFixed(2)}</td>
+                            <td>
+                              <span className={`admin__type-badge admin__type-badge--${orderType}`}>
+                                {orderType}
+                              </span>
+                            </td>
+                            <td>
+                              <span className={`order-card__status order-card__status--${order.status}`}>
+                                {order.status}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="admin__table-actions" onClick={(e) => e.stopPropagation()}>
+                                {order.status === "paid" && !allDigital && (
+                                  <button className="admin__action-btn" onClick={() => updateOrderStatus({ id: order._id, status: "shipped" })}>
+                                    Ship
+                                  </button>
+                                )}
+                                {order.status === "shipped" && (
+                                  <button className="admin__action-btn" onClick={() => updateOrderStatus({ id: order._id, status: "delivered" })}>
+                                    Deliver
+                                  </button>
+                                )}
+                                {(order.status === "paid" || order.status === "shipped") && !allDigital && (
+                                  <button className="admin__delete-btn" onClick={() => { if (confirm("Cancel this order?")) updateOrderStatus({ id: order._id, status: "cancelled" }); }}>
+                                    Cancel
+                                  </button>
+                                )}
                               </div>
-                            )}
-                          </div>
-                        ))}
-                    </div>
-                  )}
-                </div>
+                            </td>
+                          </tr>
+                          {isExpanded && (
+                            <tr className="admin__order-detail-row">
+                              <td colSpan={8}>
+                                <div className="order-card__columns">
+                                  <div className="order-card__col">
+                                    <div className="order-card__label">Items</div>
+                                    <div className="order-card__items">
+                                      {order.items.map((item: any, idx: number) => (
+                                        <div key={idx} className="order-card__item">
+                                          <span>
+                                            {item.name} &times; {item.quantity}
+                                            {(item.productType ?? "physical") === "digital" && (
+                                              <span className="admin__type-badge admin__type-badge--digital" style={{ marginLeft: "0.5rem", fontSize: "0.6rem" }}>digital</span>
+                                            )}
+                                          </span>
+                                          <span>€{((item.price * item.quantity) / 100).toFixed(2)}</span>
+                                        </div>
+                                      ))}
+                                      <div className="order-card__item order-card__item--total">
+                                        <span>Total</span>
+                                        <span>€{(order.total / 100).toFixed(2)}</span>
+                                      </div>
+                                      {order.vatRate != null && (
+                                        <div className="order-card__item" style={{ color: "var(--muted)", fontSize: "0.7rem" }}>
+                                          <span>inkl. {order.vatRate}% MwSt</span>
+                                          <span>€{((order.vatAmount ?? 0) / 100).toFixed(2)}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
 
-                <div className="order-card__actions">
-                  {order.status === "paid" && !order.items.every((item: any) => (item.productType ?? "physical") === "digital") && (
-                    <button onClick={() => updateOrderStatus({ adminSecret, id: order._id, status: "shipped" })}>
-                      Mark Shipped
-                    </button>
-                  )}
-                  {order.status === "shipped" && (
-                    <button onClick={() => updateOrderStatus({ adminSecret, id: order._id, status: "delivered" })}>
-                      Mark Delivered
-                    </button>
-                  )}
-                  {(order.status === "paid" || order.status === "shipped") && !order.items.every((item: any) => (item.productType ?? "physical") === "digital") && (
-                    <button
-                      className="admin__delete-btn"
-                      onClick={() => {
-                        if (confirm("Cancel this order?"))
-                          updateOrderStatus({ adminSecret, id: order._id, status: "cancelled" });
-                      }}
-                    >
-                      Cancel Order
-                    </button>
-                  )}
-                </div>
+                                  <div className="order-card__col">
+                                    <div className="order-card__label">Ship To</div>
+                                    <div className="order-card__address">
+                                      <p>{order.shippingAddress.name}</p>
+                                      <p>{order.shippingAddress.line1}</p>
+                                      {order.shippingAddress.line2 && <p>{order.shippingAddress.line2}</p>}
+                                      <p>
+                                        {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.postalCode}
+                                      </p>
+                                      <p>{order.shippingAddress.country}</p>
+                                    </div>
+
+                                    <div className="order-card__label" style={{ marginTop: "1rem" }}>Contact</div>
+                                    <div className="order-card__email">{order.email}</div>
+                                  </div>
+
+                                  {order.items.some((item: any) => (item.productType ?? "physical") === "digital") && (
+                                    <div className="order-card__col">
+                                      <div className="order-card__label">Digital Delivery</div>
+                                      {order.items
+                                        .filter((item: any) => (item.productType ?? "physical") === "digital")
+                                        .map((item: any, idx: number) => (
+                                          <div key={idx} style={{ marginBottom: "0.5rem" }}>
+                                            <div style={{ fontSize: "0.75rem", fontWeight: "bold" }}>{item.name}</div>
+                                            {item.downloadFileId && (
+                                              <div style={{ fontSize: "0.7rem", color: "var(--muted)" }}>
+                                                File uploaded
+                                              </div>
+                                            )}
+                                          </div>
+                                        ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+            {orders.length > ORDERS_PER_PAGE && (
+              <div className="admin__pagination">
+                <button
+                  disabled={ordersPage === 0}
+                  onClick={() => setOrdersPage((p) => p - 1)}
+                >
+                  Prev
+                </button>
+                <span className="admin__pagination-info">
+                  {ordersPage * ORDERS_PER_PAGE + 1}–{Math.min((ordersPage + 1) * ORDERS_PER_PAGE, orders.length)} of {orders.length}
+                </span>
+                <button
+                  disabled={(ordersPage + 1) * ORDERS_PER_PAGE >= orders.length}
+                  onClick={() => setOrdersPage((p) => p + 1)}
+                >
+                  Next
+                </button>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </section>
     </div>
