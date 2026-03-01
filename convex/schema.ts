@@ -11,6 +11,9 @@ export default defineSchema({
     category: v.string(),
     stock: v.number(),
     isActive: v.boolean(),
+    productType: v.optional(v.union(v.literal("physical"), v.literal("digital"))),
+    downloadUrl: v.optional(v.string()),
+    licenseKey: v.optional(v.string()),
   }).index("by_category", ["category"])
     .index("by_isActive", ["isActive"]),
 
@@ -24,6 +27,9 @@ export default defineSchema({
         name: v.string(),
         price: v.number(),
         quantity: v.number(),
+        productType: v.optional(v.union(v.literal("physical"), v.literal("digital"))),
+        downloadUrl: v.optional(v.string()),
+        licenseKey: v.optional(v.string()),
       }),
     ),
     subtotal: v.number(),
@@ -51,4 +57,10 @@ export default defineSchema({
   }).index("by_stripeSessionId", ["stripeSessionId"])
     .index("by_status", ["status"])
     .index("by_email", ["email"]),
+
+  exchangeRates: defineTable({
+    baseCurrency: v.string(),
+    rates: v.any(),
+    updatedAt: v.number(),
+  }),
 });
