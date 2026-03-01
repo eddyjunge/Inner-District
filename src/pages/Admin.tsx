@@ -404,7 +404,12 @@ export default function Admin() {
                     <div className="order-card__items">
                       {order.items.map((item: any, idx: number) => (
                         <div key={idx} className="order-card__item">
-                          <span>{item.name} &times; {item.quantity}</span>
+                          <span>
+                            {item.name} &times; {item.quantity}
+                            {(item.productType ?? "physical") === "digital" && (
+                              <span className="admin__type-badge admin__type-badge--digital" style={{ marginLeft: "0.5rem", fontSize: "0.6rem" }}>digital</span>
+                            )}
+                          </span>
                           <span>€{((item.price * item.quantity) / 100).toFixed(2)}</span>
                         </div>
                       ))}
@@ -436,6 +441,29 @@ export default function Admin() {
                     <div className="order-card__label" style={{ marginTop: "1rem" }}>Contact</div>
                     <div className="order-card__email">{order.email}</div>
                   </div>
+
+                  {order.items.some((item: any) => (item.productType ?? "physical") === "digital") && (
+                    <div className="order-card__col">
+                      <div className="order-card__label">Digital Delivery</div>
+                      {order.items
+                        .filter((item: any) => (item.productType ?? "physical") === "digital")
+                        .map((item: any, idx: number) => (
+                          <div key={idx} style={{ marginBottom: "0.5rem" }}>
+                            <div style={{ fontSize: "0.75rem", fontWeight: "bold" }}>{item.name}</div>
+                            {item.downloadUrl && (
+                              <div style={{ fontSize: "0.7rem", color: "var(--muted)" }}>
+                                URL: <a href={item.downloadUrl} target="_blank" rel="noopener noreferrer">{item.downloadUrl}</a>
+                              </div>
+                            )}
+                            {item.licenseKey && (
+                              <div style={{ fontSize: "0.7rem", color: "var(--muted)" }}>
+                                Key: <code>{item.licenseKey}</code>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="order-card__actions">
