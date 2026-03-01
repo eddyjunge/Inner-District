@@ -37,7 +37,8 @@ export const SHIPPING_RATES = {
 } as const;
 
 /** Get shipping cost in cents for a country code */
-export function getShippingRate(countryCode: string): number {
+export function getShippingRate(countryCode: string, hasPhysicalItems = true): number {
+  if (!hasPhysicalItems) return 0;
   const country = EU_COUNTRIES[countryCode];
   if (!country) throw new Error(`Unsupported country: ${countryCode}`);
   return SHIPPING_RATES[country.zone];

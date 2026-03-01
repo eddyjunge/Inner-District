@@ -33,7 +33,8 @@ export const SHIPPING_RATES = {
   eu: 899,
 } as const;
 
-export function getShippingRate(countryCode: string): number {
+export function getShippingRate(countryCode: string, hasPhysicalItems = true): number {
+  if (!hasPhysicalItems) return 0;
   const country = EU_COUNTRIES[countryCode];
   if (!country) return 0;
   return SHIPPING_RATES[country.zone];

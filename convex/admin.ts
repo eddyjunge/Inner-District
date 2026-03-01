@@ -52,6 +52,9 @@ export const createProduct = mutation({
     images: v.array(v.string()),
     category: v.string(),
     stock: v.number(),
+    productType: v.optional(v.union(v.literal("physical"), v.literal("digital"))),
+    downloadUrl: v.optional(v.string()),
+    licenseKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     assertAdmin(args.adminSecret);
@@ -75,6 +78,9 @@ export const updateProduct = mutation({
     category: v.optional(v.string()),
     stock: v.optional(v.number()),
     isActive: v.optional(v.boolean()),
+    productType: v.optional(v.union(v.literal("physical"), v.literal("digital"))),
+    downloadUrl: v.optional(v.string()),
+    licenseKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     assertAdmin(args.adminSecret);
