@@ -29,7 +29,7 @@ export const createDemoOrder = mutation({
       const product = await ctx.db.get(item.productId);
       if (!product) throw new Error(`Product ${item.productId} not found`);
       if (!product.isActive) throw new Error(`${product.name} is no longer available`);
-      if (product.stock < item.quantity) {
+      if ((product.productType ?? "physical") === "physical" && product.stock < item.quantity) {
         throw new Error(`Only ${product.stock} of ${product.name} available`);
       }
 
@@ -40,15 +40,14 @@ export const createDemoOrder = mutation({
         quantity: item.quantity,
         productType: (product.productType ?? "physical") as "physical" | "digital",
         downloadFileId: product.downloadFileId,
-        licenseKey: product.licenseKey,
       });
       subtotal += product.price * item.quantity;
     }
 
-    // Decrement stock
+    // Decrement stock (physical only)
     for (const item of args.items) {
       const product = await ctx.db.get(item.productId);
-      if (product) {
+      if (product && (product.productType ?? "physical") === "physical") {
         await ctx.db.patch(item.productId, {
           stock: product.stock - item.quantity,
         });
@@ -62,6 +61,7 @@ export const createDemoOrder = mutation({
     const total = subtotal + shipping;
     const vatAmount = extractVat(total, vatRate);
 
+    const allDigital = orderItems.every((i) => i.productType === "digital");
     const demoSessionId = `demo_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
     const orderId = await ctx.db.insert("orders", {
@@ -74,7 +74,7 @@ export const createDemoOrder = mutation({
       vatRate,
       vatAmount,
       shippingAddress: args.shippingAddress,
-      status: "paid",
+      status: allDigital ? "delivered" : "paid",
       createdAt: Date.now(),
     });
 

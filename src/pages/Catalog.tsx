@@ -26,7 +26,8 @@ export default function Catalog() {
       <div className="catalog__grid">
         {products.map((product, i) => {
           const inCart = items.find((it) => it.productId === product._id)?.quantity ?? 0;
-          const atLimit = inCart >= product.stock;
+          const isDigital = (product as any).productType === "digital";
+          const atLimit = isDigital ? false : inCart >= product.stock;
 
           return (
             <div
@@ -51,7 +52,7 @@ export default function Catalog() {
                     {formatPrice(product.price, rates, userCurrency)}
                   </p>
                   <p className="product-card__stock">
-                    {product.stock > 0 ? `${product.stock} in stock` : "Sold out"}
+                    {isDigital ? "Digital" : product.stock > 0 ? `${product.stock} in stock` : "Sold out"}
                   </p>
                 </div>
                 <button
@@ -60,7 +61,7 @@ export default function Catalog() {
                     e.stopPropagation();
                     addItem(product._id);
                   }}
-                  disabled={product.stock === 0 || atLimit}
+                  disabled={!isDigital && (product.stock === 0 || atLimit)}
                 >
                   {atLimit && product.stock > 0 ? "Max in cart" : "Add to Cart"}
                 </button>

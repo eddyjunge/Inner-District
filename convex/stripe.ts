@@ -46,10 +46,10 @@ export const createCheckoutSession = action({
         );
         if (!product) throw new Error(`Product not found: ${item.productId}`);
         if (!product.isActive) throw new Error(`Product unavailable: ${product.name}`);
-        if (product.stock < item.quantity) {
+        if ((product.productType ?? "physical") === "physical" && product.stock < item.quantity) {
           throw new Error(`Insufficient stock for ${product.name}`);
         }
-        return { _id: product._id, name: product.name, price: product.price, stripePriceId: product.stripePriceId, quantity: item.quantity, productType: (product.productType ?? "physical") as "physical" | "digital", downloadFileId: product.downloadFileId, licenseKey: product.licenseKey };
+        return { _id: product._id, name: product.name, price: product.price, stripePriceId: product.stripePriceId, quantity: item.quantity, productType: (product.productType ?? "physical") as "physical" | "digital", downloadFileId: product.downloadFileId };
       }),
     );
 
@@ -84,7 +84,6 @@ export const createCheckoutSession = action({
           quantity: p.quantity,
           productType: p.productType,
           downloadFileId: p.downloadFileId,
-          licenseKey: p.licenseKey,
         })),
         shippingAddress: args.shippingAddress,
         subtotal,

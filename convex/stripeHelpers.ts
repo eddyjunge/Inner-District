@@ -18,7 +18,6 @@ export const createPendingOrder = internalMutation({
         quantity: v.number(),
         productType: v.optional(v.union(v.literal("physical"), v.literal("digital"))),
         downloadFileId: v.optional(v.id("_storage")),
-        licenseKey: v.optional(v.string()),
       }),
     ),
     shippingAddress: v.object({
@@ -84,6 +83,7 @@ export const fulfillOrder = internalMutation({
     if (order.status !== "pending") return order._id;
 
     for (const item of order.items) {
+      if ((item.productType ?? "physical") === "digital") continue;
       const product = await ctx.db.get(item.productId);
       if (product) {
         await ctx.db.patch(item.productId, {
@@ -92,8 +92,11 @@ export const fulfillOrder = internalMutation({
       }
     }
 
+    const allDigital = order.items.every(
+      (item) => (item.productType ?? "physical") === "digital"
+    );
     await ctx.db.patch(order._id, {
-      status: "paid",
+      status: allDigital ? "delivered" : "paid",
       stripePaymentIntentId: args.stripePaymentIntentId,
     });
 

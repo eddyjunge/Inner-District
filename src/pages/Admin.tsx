@@ -13,7 +13,6 @@ interface ProductForm {
   productType: "physical" | "digital";
   downloadFileId: string;
   downloadFileName: string;
-  licenseKey: string;
 }
 
 const emptyForm: ProductForm = {
@@ -26,7 +25,6 @@ const emptyForm: ProductForm = {
   productType: "physical",
   downloadFileId: "",
   downloadFileName: "",
-  licenseKey: "",
 };
 
 export default function Admin() {
@@ -106,7 +104,6 @@ export default function Admin() {
       productType: (p.productType as "physical" | "digital") ?? "physical",
       downloadFileId: (p.downloadFileId as string) ?? "",
       downloadFileName: p.downloadFileId ? "Uploaded file" : "",
-      licenseKey: p.licenseKey ?? "",
     });
     setImageUrls(p.images || []);
     formRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -158,7 +155,6 @@ export default function Admin() {
         stock: parseInt(form.stock),
         productType: form.productType,
         downloadFileId: form.productType === "digital" && form.downloadFileId ? form.downloadFileId as any : undefined,
-        licenseKey: form.productType === "digital" && form.licenseKey ? form.licenseKey : undefined,
       });
       setEditingId(null);
     } else {
@@ -173,7 +169,6 @@ export default function Admin() {
         stock: parseInt(form.stock),
         productType: form.productType,
         downloadFileId: form.productType === "digital" && form.downloadFileId ? form.downloadFileId as any : undefined,
-        licenseKey: form.productType === "digital" && form.licenseKey ? form.licenseKey : undefined,
       });
     }
     setForm(emptyForm);
@@ -216,7 +211,9 @@ export default function Admin() {
           <input placeholder="Price (EUR, e.g. 19.99)" value={form.price} onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))} required />
           <input placeholder="Stripe Price ID (price_xxx)" value={form.stripePriceId} onChange={(e) => setForm((p) => ({ ...p, stripePriceId: e.target.value }))} required />
           <input placeholder="Category" value={form.category} onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))} required />
-          <input placeholder="Stock" type="number" value={form.stock} onChange={(e) => setForm((p) => ({ ...p, stock: e.target.value }))} required />
+          {form.productType === "physical" && (
+            <input placeholder="Stock" type="number" value={form.stock} onChange={(e) => setForm((p) => ({ ...p, stock: e.target.value }))} required />
+          )}
 
           <div className="admin__form-row">
             <label className="admin__label">Product Type</label>
@@ -282,11 +279,6 @@ export default function Admin() {
                   />
                 </div>
               )}
-              <input
-                placeholder="License Key (optional)"
-                value={form.licenseKey}
-                onChange={(e) => setForm((p) => ({ ...p, licenseKey: e.target.value }))}
-              />
             </>
           )}
 
@@ -504,11 +496,6 @@ export default function Admin() {
                                 File uploaded
                               </div>
                             )}
-                            {item.licenseKey && (
-                              <div style={{ fontSize: "0.7rem", color: "var(--muted)" }}>
-                                Key: <code>{item.licenseKey}</code>
-                              </div>
-                            )}
                           </div>
                         ))}
                     </div>
@@ -516,7 +503,7 @@ export default function Admin() {
                 </div>
 
                 <div className="order-card__actions">
-                  {order.status === "paid" && (
+                  {order.status === "paid" && !order.items.every((item: any) => (item.productType ?? "physical") === "digital") && (
                     <button onClick={() => updateOrderStatus({ adminSecret, id: order._id, status: "shipped" })}>
                       Mark Shipped
                     </button>
@@ -526,7 +513,7 @@ export default function Admin() {
                       Mark Delivered
                     </button>
                   )}
-                  {(order.status === "paid" || order.status === "shipped") && (
+                  {(order.status === "paid" || order.status === "shipped") && !order.items.every((item: any) => (item.productType ?? "physical") === "digital") && (
                     <button
                       className="admin__delete-btn"
                       onClick={() => {

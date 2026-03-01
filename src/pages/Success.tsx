@@ -65,11 +65,6 @@ export default function Success() {
                           </a>
                         </p>
                       )}
-                      {item.licenseKey && (
-                        <p className="status-page__license">
-                          License Key: <code>{item.licenseKey}</code>
-                        </p>
-                      )}
                     </div>
                   );
                 })}

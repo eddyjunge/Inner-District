@@ -38,7 +38,8 @@ export default function ProductDetail() {
 
   const images = product.images || [];
   const inCart = items.find((it) => it.productId === product._id)?.quantity ?? 0;
-  const atLimit = inCart >= product.stock;
+  const isDigital = (product as any).productType === "digital";
+  const atLimit = isDigital ? false : inCart >= product.stock;
 
   return (
     <div className="product-detail">
@@ -71,13 +72,13 @@ export default function ProductDetail() {
         {formatPrice(product.price, rates, userCurrency)}
       </p>
       <p className="product-detail__stock">
-        {product.stock > 0 ? `${product.stock} in stock` : "Sold out"}
+        {isDigital ? "Digital download" : product.stock > 0 ? `${product.stock} in stock` : "Sold out"}
         {inCart > 0 && ` · ${inCart} in cart`}
       </p>
       <button
         className="product-detail__btn"
         onClick={() => addItem(product._id)}
-        disabled={product.stock === 0 || atLimit}
+        disabled={!isDigital && (product.stock === 0 || atLimit)}
       >
         {atLimit && product.stock > 0 ? "Max in cart" : "Add to Cart"}
       </button>

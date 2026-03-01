@@ -1210,19 +1210,6 @@ select {
   border-color: var(--accent);
 }
 
-.status-page__license {
-  font-family: var(--font-body);
-  font-size: 0.8rem;
-  margin-top: 0.35rem;
-}
-
-.status-page__license code {
-  background: var(--fg);
-  color: var(--bg);
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-}
 
 /* ========================================
    RESPONSIVE
