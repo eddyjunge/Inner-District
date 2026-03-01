@@ -1,4 +1,4 @@
-import { query } from "./_generated/server";
+import { query, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 
 export const getBySessionId = query({
@@ -23,5 +23,21 @@ export const getBySessionId = query({
       status: order.status,
       createdAt: order.createdAt,
     };
+  },
+});
+
+export const getOrderForDownload = internalQuery({
+  args: {
+    orderId: v.string(),
+    email: v.string(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const order = await ctx.db.get(args.orderId as any);
+      if (!order || order.email !== args.email) return null;
+      return order;
+    } catch {
+      return null;
+    }
   },
 });
