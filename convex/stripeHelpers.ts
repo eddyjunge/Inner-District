@@ -16,6 +16,9 @@ export const createPendingOrder = internalMutation({
         name: v.string(),
         price: v.number(),
         quantity: v.number(),
+        productType: v.optional(v.union(v.literal("physical"), v.literal("digital"))),
+        downloadUrl: v.optional(v.string()),
+        licenseKey: v.optional(v.string()),
       }),
     ),
     shippingAddress: v.object({

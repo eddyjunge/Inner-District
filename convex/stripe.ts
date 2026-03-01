@@ -49,7 +49,7 @@ export const createCheckoutSession = action({
         if (product.stock < item.quantity) {
           throw new Error(`Insufficient stock for ${product.name}`);
         }
-        return { _id: product._id, name: product.name, price: product.price, stripePriceId: product.stripePriceId, quantity: item.quantity };
+        return { _id: product._id, name: product.name, price: product.price, stripePriceId: product.stripePriceId, quantity: item.quantity, productType: (product.productType ?? "physical") as "physical" | "digital", downloadUrl: product.downloadUrl, licenseKey: product.licenseKey };
       }),
     );
 
@@ -59,9 +59,10 @@ export const createCheckoutSession = action({
       quantity: p.quantity,
     }));
 
-    // Get shipping rate from env
+    // Determine if cart has physical items for shipping
+    const hasPhysicalItems = validatedItems.some((p) => p.productType === "physical");
     const countryCode = args.shippingAddress.country;
-    const shippingAmount = getShippingRate(countryCode);
+    const shippingAmount = getShippingRate(countryCode, hasPhysicalItems);
     const vatRate = getVatRate(countryCode);
 
     // Compute totals server-side
@@ -81,6 +82,9 @@ export const createCheckoutSession = action({
           name: p.name,
           price: p.price,
           quantity: p.quantity,
+          productType: p.productType,
+          downloadUrl: p.downloadUrl,
+          licenseKey: p.licenseKey,
         })),
         shippingAddress: args.shippingAddress,
         subtotal,
@@ -108,9 +112,11 @@ export const createCheckoutSession = action({
       shipping_options: [
         {
           shipping_rate_data: {
-            type: "fixed_amount",
+            type: "fixed_amount" as const,
             fixed_amount: { amount: shippingAmount, currency: "eur" },
-            display_name: countryCode === "DE" ? "Versand (Deutschland)" : "Versand (EU)",
+            display_name: hasPhysicalItems
+              ? (countryCode === "DE" ? "Versand (Deutschland)" : "Versand (EU)")
+              : "Digital delivery (no shipping)",
           },
         },
       ],

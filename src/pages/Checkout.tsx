@@ -56,7 +56,10 @@ export default function Checkout() {
     0,
   );
 
-  const shipping = getShippingRate(form.country);
+  const hasPhysicalItems = cartWithProducts.some(
+    (i) => ((i.product as any).productType ?? "physical") === "physical"
+  );
+  const shipping = getShippingRate(form.country, hasPhysicalItems);
   const vatRate = getVatRate(form.country);
   const total = subtotal + shipping;
   const vatAmount = extractVat(total, vatRate);

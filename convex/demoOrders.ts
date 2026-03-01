@@ -38,6 +38,9 @@ export const createDemoOrder = mutation({
         name: product.name,
         price: product.price,
         quantity: item.quantity,
+        productType: (product.productType ?? "physical") as "physical" | "digital",
+        downloadUrl: product.downloadUrl,
+        licenseKey: product.licenseKey,
       });
       subtotal += product.price * item.quantity;
     }
@@ -52,8 +55,9 @@ export const createDemoOrder = mutation({
       }
     }
 
+    const hasPhysicalItems = orderItems.some((i) => i.productType === "physical");
     const countryCode = args.shippingAddress.country;
-    const shipping = getShippingRate(countryCode);
+    const shipping = getShippingRate(countryCode, hasPhysicalItems);
     const vatRate = getVatRate(countryCode);
     const total = subtotal + shipping;
     const vatAmount = extractVat(total, vatRate);
