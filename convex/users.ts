@@ -1,23 +1,34 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { getAuthUserId } from "@convex-dev/auth/server";
 
 export const me = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return null;
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
 
-    const user = await ctx.db.get(userId);
+    // Look up user by tokenIdentifier first, then fall back to email
+    let user = await ctx.db
+      .query("users")
+      .withIndex("by_tokenIdentifier", (q) =>
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
+      )
+      .first();
+
+    if (!user && identity.email) {
+      user = await ctx.db
+        .query("users")
+        .withIndex("by_email", (q) => q.eq("email", identity.email!))
+        .first();
+    }
+
     if (!user) return null;
 
-    const email = (user.email as string) ?? "";
-
     return {
-      email,
-      name: (user.name as string) ?? "",
-      savedAddress: (user as any)?.savedAddress ?? null,
-      isAdmin: await isAdmin(ctx, email),
+      email: user.email,
+      name: user.name ?? "",
+      savedAddress: user.savedAddress ?? null,
+      isAdmin: await isAdmin(ctx, user.email),
     };
   },
 });
@@ -35,80 +46,87 @@ export const saveAddress = mutation({
     }),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
 
-    await ctx.db.patch(userId, { savedAddress: args.address } as any);
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_tokenIdentifier", (q) =>
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
+      )
+      .first();
+
+    if (!user) throw new Error("User not found");
+
+    await ctx.db.patch(user._id, { savedAddress: args.address });
   },
 });
 
 export const myOrders = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return [];
-
-    const user = await ctx.db.get(userId);
-    if (!user?.email) return [];
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity?.email) return [];
 
     return await ctx.db
       .query("orders")
-      .withIndex("by_email", (q) => q.eq("email", user.email!))
+      .withIndex("by_email", (q) => q.eq("email", identity.email!))
       .order("desc")
       .collect();
   },
 });
 
-// Temporary: list all users and auth accounts for debugging
-export const listAllAuthData = query({
+export const ensureUser = mutation({
   args: {},
   handler: async (ctx) => {
-    const users = await ctx.db.query("users").collect();
-    const accounts = await ctx.db.query("authAccounts").collect();
-    return {
-      users: users.map((u) => ({ _id: u._id, email: u.email, name: u.name })),
-      accounts: accounts.map((a) => ({
-        _id: a._id,
-        userId: a.userId,
-        provider: a.provider,
-        providerAccountId: a.providerAccountId,
-      })),
-    };
-  },
-});
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
 
-// Temporary: delete a user by ID and all auth records
-export const deleteUserById = mutation({
-  args: { userId: v.string() },
-  handler: async (ctx, args) => {
-    const userId = args.userId as any;
-    const user = await ctx.db.get(userId);
-    if (!user) return { deleted: false };
-    // Delete auth accounts
-    const accounts = await ctx.db
-      .query("authAccounts")
-      .withIndex("userIdAndProvider", (q) => q.eq("userId", userId))
-      .collect();
-    for (const account of accounts) {
-      await ctx.db.delete(account._id);
-    }
-    // Delete auth sessions
-    const sessions = await ctx.db
-      .query("authSessions")
-      .withIndex("userId", (q) => q.eq("userId", userId))
-      .collect();
-    for (const session of sessions) {
-      const tokens = await ctx.db
-        .query("authRefreshTokens")
-        .withIndex("sessionId", (q) => q.eq("sessionId", session._id))
-        .collect();
-      for (const token of tokens) {
-        await ctx.db.delete(token._id);
+    const email = identity.email ?? "";
+
+    // Check if user already exists by tokenIdentifier
+    const existingByToken = await ctx.db
+      .query("users")
+      .withIndex("by_tokenIdentifier", (q) =>
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
+      )
+      .first();
+
+    if (existingByToken) {
+      // Already linked — update email/name if changed
+      const updates: Record<string, string> = {};
+      if (email && existingByToken.email !== email) updates.email = email;
+      if (identity.name && existingByToken.name !== identity.name)
+        updates.name = identity.name;
+      if (Object.keys(updates).length > 0) {
+        await ctx.db.patch(existingByToken._id, updates);
       }
-      await ctx.db.delete(session._id);
+      return;
     }
-    await ctx.db.delete(userId);
-    return { deleted: true };
+
+    // Check if user exists by email (migrating from old auth)
+    if (email) {
+      const existingByEmail = await ctx.db
+        .query("users")
+        .withIndex("by_email", (q) => q.eq("email", email))
+        .first();
+
+      if (existingByEmail) {
+        // Link old user to new WorkOS identity
+        await ctx.db.patch(existingByEmail._id, {
+          tokenIdentifier: identity.tokenIdentifier,
+          ...(identity.name ? { name: identity.name } : {}),
+        });
+        return;
+      }
+    }
+
+    // Create new user
+    await ctx.db.insert("users", {
+      tokenIdentifier: identity.tokenIdentifier,
+      email,
+      ...(identity.name ? { name: identity.name } : {}),
+    });
   },
 });
 

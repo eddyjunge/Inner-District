@@ -1,11 +1,11 @@
 import { useConvexAuth, useQuery } from "convex/react";
-import { useAuthActions } from "@convex-dev/auth/react";
+import { useAuth } from "@workos-inc/authkit-react";
 import { Navigate, Link } from "react-router";
 import { api } from "../../convex/_generated/api";
 
 export default function Account() {
   const { isAuthenticated, isLoading } = useConvexAuth();
-  const { signOut } = useAuthActions();
+  const { signOut } = useAuth();
   const user = useQuery(api.users.me, isAuthenticated ? {} : "skip");
   const orders = useQuery(api.users.myOrders, isAuthenticated ? {} : "skip");
 
@@ -17,7 +17,7 @@ export default function Account() {
     <div className="account">
       <div className="account__header">
         <h1 className="account__title">My Account</h1>
-        <button className="account__logout-btn" onClick={() => void signOut()}>
+        <button className="account__logout-btn" onClick={() => signOut()}>
           Sign Out
         </button>
       </div>

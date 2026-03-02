@@ -1,6 +1,7 @@
+import { useEffect, useRef } from "react";
 import { Link } from "react-router";
-import { useConvexAuth, useQuery } from "convex/react";
-import { useAuthActions } from "@convex-dev/auth/react";
+import { useConvexAuth, useQuery, useMutation } from "convex/react";
+import { useAuth } from "@workos-inc/authkit-react";
 import { useCart } from "../lib/cart";
 import { api } from "../../convex/_generated/api";
 import CookieBanner from "./CookieBanner";
@@ -8,8 +9,23 @@ import CookieBanner from "./CookieBanner";
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { totalItems } = useCart();
   const { isAuthenticated, isLoading } = useConvexAuth();
-  const { signOut } = useAuthActions();
+  const { signOut } = useAuth();
   const user = useQuery(api.users.me, isAuthenticated ? {} : "skip");
+  const ensureUser = useMutation(api.users.ensureUser);
+  const ensuredRef = useRef(false);
+
+  useEffect(() => {
+    if (isAuthenticated && !ensuredRef.current) {
+      ensuredRef.current = true;
+      ensureUser().catch(() => {
+        // Reset so it can retry on next render
+        ensuredRef.current = false;
+      });
+    }
+    if (!isAuthenticated) {
+      ensuredRef.current = false;
+    }
+  }, [isAuthenticated, ensureUser]);
 
   return (
     <div>
@@ -29,7 +45,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <Link to="/account" className="header__user-link">
                   {user?.email ?? "Account"}
                 </Link>
-                <button className="header__logout-btn" onClick={() => void signOut()}>
+                <button className="header__logout-btn" onClick={() => signOut()}>
                   Logout
                 </button>
               </div>
