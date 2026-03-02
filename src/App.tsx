@@ -7,6 +7,8 @@ import Checkout from "./pages/Checkout";
 import Success from "./pages/Success";
 import Cancel from "./pages/Cancel";
 import Admin from "./pages/Admin";
+import Impressum from "./pages/Impressum";
+import CookiePolicy from "./pages/CookiePolicy";
 
 export default function App() {
   return (
@@ -19,6 +21,8 @@ export default function App() {
         <Route path="/success" element={<Success />} />
         <Route path="/cancel" element={<Cancel />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/impressum" element={<Impressum />} />
+        <Route path="/cookies" element={<CookiePolicy />} />
       </Routes>
     </Layout>
   );

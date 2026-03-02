@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import { useCart } from "../lib/cart";
+import CookieBanner from "./CookieBanner";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { totalItems } = useCart();
@@ -19,6 +20,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </nav>
       </header>
       <main className="main">{children}</main>
+      <footer className="footer">
+        <div className="footer__inner">
+          <nav className="footer__links">
+            <Link to="/impressum">Impressum</Link>
+            <span className="footer__sep">|</span>
+            <Link to="/cookies">Datenschutz &amp; Cookies</Link>
+          </nav>
+          <p className="footer__copy">&copy; 2026 Inner District</p>
+        </div>
+      </footer>
+      <CookieBanner />
     </div>
   );
 }
