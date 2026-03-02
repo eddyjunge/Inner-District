@@ -26,11 +26,17 @@ export default function Login() {
       await signIn("password", formData);
       navigate(returnTo);
     } catch (err: any) {
-      setError(
-        flow === "signUp"
-          ? "Could not create account. Email may already be in use."
-          : "Invalid email or password.",
-      );
+      const msg = (err?.message || String(err)).toLowerCase();
+      if (flow === "signUp" && msg.includes("already exists")) {
+        setError("An account with this email already exists. Please sign in instead.");
+        setFlow("signIn");
+      } else if (flow === "signIn" && msg.includes("invalid")) {
+        setError("Invalid email or password.");
+      } else {
+        setError(flow === "signUp"
+          ? "Could not create account. Please try again."
+          : "Could not sign in. Please try again.");
+      }
     } finally {
       setSubmitting(false);
     }
