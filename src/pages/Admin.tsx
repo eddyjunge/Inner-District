@@ -1,7 +1,34 @@
-import { useState, useRef, useCallback, Fragment } from "react";
+import { useState, useRef, useCallback, Fragment, Component, type ReactNode } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
+
+class AdminErrorBoundary extends Component<
+  { onAuthError: () => void; children: ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error) {
+    if (error.message.includes("Not authorized")) {
+      sessionStorage.removeItem("adminSecret");
+      this.props.onAuthError();
+    }
+  }
+
+  reset() {
+    this.setState({ hasError: false });
+  }
+
+  render() {
+    if (this.state.hasError) return null;
+    return this.props.children;
+  }
+}
 
 interface ProductForm {
   name: string;
@@ -32,14 +59,56 @@ export default function Admin() {
     () => sessionStorage.getItem("adminSecret") ?? "",
   );
   const [secretInput, setSecretInput] = useState("");
+  const [authError, setAuthError] = useState("");
   const authenticated = adminSecret.length > 0;
 
+  function logout() {
+    sessionStorage.removeItem("adminSecret");
+    setAdminSecret("");
+    setSecretInput("");
+    setAuthError("Not authorized. Please check your password.");
+  }
+
+  if (!authenticated) {
+    return (
+      <div className="login">
+        <h1 className="login__title">Admin</h1>
+        {authError && <p className="login__error">{authError}</p>}
+        <form
+          className="login__form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setAuthError("");
+            sessionStorage.setItem("adminSecret", secretInput);
+            setAdminSecret(secretInput);
+          }}
+        >
+          <input
+            type="password"
+            placeholder="Admin Secret"
+            value={secretInput}
+            onChange={(e) => setSecretInput(e.target.value)}
+            required
+          />
+          <button type="submit" className="login__btn">
+            Sign In
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  return (
+    <AdminErrorBoundary key={adminSecret} onAuthError={logout}>
+      <AdminDashboard adminSecret={adminSecret} onLogout={() => { sessionStorage.removeItem("adminSecret"); setAdminSecret(""); }} />
+    </AdminErrorBoundary>
+  );
+}
+
+function AdminDashboard({ adminSecret, onLogout }: { adminSecret: string; onLogout: () => void }) {
   const [newAdminEmail, setNewAdminEmail] = useState("");
 
-  const products = useQuery(
-    api.admin.listProducts,
-    authenticated ? { adminSecret } : "skip",
-  );
+  const products = useQuery(api.admin.listProducts, { adminSecret });
   const [orderStatusFilter, setOrderStatusFilter] = useState<string>("all");
   const [ordersPage, setOrdersPage] = useState(0);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
@@ -47,13 +116,13 @@ export default function Admin() {
 
   const orders = useQuery(
     api.admin.listOrders,
-    authenticated ? { adminSecret, status: orderStatusFilter !== "all" ? orderStatusFilter as any : undefined } : "skip",
+    { adminSecret, status: orderStatusFilter !== "all" ? orderStatusFilter as any : undefined },
   );
   const createProduct = useMutation(api.admin.createProduct);
   const updateProduct = useMutation(api.admin.updateProduct);
   const deleteProduct = useMutation(api.admin.deleteProduct);
   const updateOrderStatus = useMutation(api.admin.updateOrderStatus);
-  const adminEmails = useQuery(api.admin.listAdminEmails, authenticated ? { adminSecret } : "skip");
+  const adminEmails = useQuery(api.admin.listAdminEmails, { adminSecret });
   const addAdminEmail = useMutation(api.admin.addAdminEmail);
   const removeAdminEmail = useMutation(api.admin.removeAdminEmail);
   const generateUploadUrl = useMutation(api.upload.generateUploadUrl);
@@ -124,33 +193,6 @@ export default function Admin() {
     setImageUrls([]);
   };
 
-  if (!authenticated) {
-    return (
-      <div className="login">
-        <h1 className="login__title">Admin</h1>
-        <form
-          className="login__form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            sessionStorage.setItem("adminSecret", secretInput);
-            setAdminSecret(secretInput);
-          }}
-        >
-          <input
-            type="password"
-            placeholder="Admin Secret"
-            value={secretInput}
-            onChange={(e) => setSecretInput(e.target.value)}
-            required
-          />
-          <button type="submit" className="login__btn">
-            Sign In
-          </button>
-        </form>
-      </div>
-    );
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingId) {
@@ -212,7 +254,7 @@ export default function Admin() {
     <div className="admin">
       <div className="admin__header">
         <h1 className="admin__title">Admin Dashboard</h1>
-        <button className="admin__logout-btn" onClick={() => { sessionStorage.removeItem("adminSecret"); setAdminSecret(""); }}>
+        <button className="admin__logout-btn" onClick={onLogout}>
           Logout
         </button>
       </div>
