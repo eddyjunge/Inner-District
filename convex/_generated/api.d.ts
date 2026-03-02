@@ -19,6 +19,7 @@ import type * as products from "../products.js";
 import type * as stripe from "../stripe.js";
 import type * as stripeHelpers from "../stripeHelpers.js";
 import type * as upload from "../upload.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   stripe: typeof stripe;
   stripeHelpers: typeof stripeHelpers;
   upload: typeof upload;
+  users: typeof users;
 }>;
 
 /**
