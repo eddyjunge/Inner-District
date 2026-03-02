@@ -19,11 +19,7 @@ export default function Login() {
     setError("");
     setSubmitting(true);
     try {
-      const formData = new FormData();
-      formData.set("email", email);
-      formData.set("password", password);
-      formData.set("flow", flow);
-      await signIn("password", formData);
+      await signIn("password", { email, password, flow });
       navigate(returnTo);
     } catch (err: any) {
       const msg = (err?.message || String(err)).toLowerCase();
