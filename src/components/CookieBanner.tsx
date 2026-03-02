@@ -1,18 +1,32 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
+import { COOKIE_POLICY_VERSION } from "../lib/cookiePolicy";
 
 export default function CookieBanner() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const consent = localStorage.getItem("cookie-consent");
-    if (!consent) {
+    const raw = localStorage.getItem("cookie-consent");
+    if (!raw) {
+      setVisible(true);
+      return;
+    }
+    try {
+      const stored = JSON.parse(raw);
+      if (stored.version !== COOKIE_POLICY_VERSION) {
+        setVisible(true);
+      }
+    } catch {
+      // legacy plain-string format — re-prompt
       setVisible(true);
     }
   }, []);
 
   function accept(level: "all" | "essential") {
-    localStorage.setItem("cookie-consent", level);
+    localStorage.setItem(
+      "cookie-consent",
+      JSON.stringify({ level, version: COOKIE_POLICY_VERSION }),
+    );
     setVisible(false);
   }
 

@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { COOKIE_POLICY_DATE } from "../lib/cookiePolicy";
 
 export default function CookiePolicy() {
   return (
@@ -161,7 +162,12 @@ export default function CookiePolicy() {
           stets den aktuellen rechtlichen Anforderungen entspricht oder um Anderungen unserer
           Leistungen umzusetzen.
         </p>
-        <p><em>Stand: Marz 2026</em></p>
+        <p>
+          Bei wesentlichen Anderungen dieser Richtlinie werden Sie erneut um Ihre Einwilligung
+          gebeten. Die erneute Einwilligung erfolgt automatisch uber das Cookie-Banner beim
+          nachsten Besuch der Website.
+        </p>
+        <p><em>Stand: {COOKIE_POLICY_DATE}</em></p>
       </section>
     </div>
   );
