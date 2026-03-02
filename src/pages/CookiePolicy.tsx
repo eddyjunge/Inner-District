@@ -43,6 +43,7 @@ export default function CookiePolicy() {
         <ul>
           <li><strong>Warenkorb:</strong> Ihre Warenkorb-Daten werden lokal in Ihrem Browser gespeichert, damit Ihr Warenkorb zwischen Seitenaufrufen erhalten bleibt. Diese Daten werden nicht an unsere Server ubertragen.</li>
           <li><strong>Cookie-Einwilligung:</strong> Ihre Entscheidung bezuglich der Cookie-Einwilligung wird lokal gespeichert, damit das Banner nicht erneut angezeigt wird.</li>
+          <li><strong>Authentifizierung:</strong> Nach der Anmeldung wird ein Sitzungs-Token lokal gespeichert, um Sie angemeldet zu halten.</li>
         </ul>
         <p>
           Sie konnen die localStorage-Daten jederzeit uber die Einstellungen Ihres Browsers loschen.
@@ -58,7 +59,44 @@ export default function CookiePolicy() {
       </section>
 
       <section className="legal-page__section">
-        <h2>4. Bestellungen &amp; Zahlungsabwicklung</h2>
+        <h2>4. Benutzerkonto &amp; Authentifizierung</h2>
+
+        <h3>Registrierung und Anmeldung</h3>
+        <p>
+          Sie konnen ein Benutzerkonto erstellen, um Bestellungen zu verfolgen und Ihre
+          Lieferadresse zu speichern. Bei der Registrierung verarbeiten wir:
+        </p>
+        <ul>
+          <li><strong>E-Mail-Adresse:</strong> Zur Identifikation Ihres Kontos und fur die Kommunikation</li>
+          <li><strong>Passwort:</strong> Wird verschlusselt (gehasht) gespeichert. Wir haben keinen Zugriff auf Ihr Klartext-Passwort.</li>
+        </ul>
+
+        <h3>Anmeldung uber Google</h3>
+        <p>
+          Sie konnen sich alternativ mit Ihrem Google-Konto anmelden. Dabei erhalten wir von Google
+          Ihre E-Mail-Adresse und Ihren Namen. Es gelten zusatzlich die Datenschutzbestimmungen von
+          Google:{" "}
+          <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">
+            https://policies.google.com/privacy
+          </a>
+        </p>
+
+        <h3>Sitzungsverwaltung</h3>
+        <p>
+          Nach der Anmeldung wird ein Authentifizierungs-Token in Ihrem Browser gespeichert
+          (localStorage), um Sie bei zukunftigen Besuchen angemeldet zu halten. Dieses Token
+          enthalt keine personenbezogenen Daten und wird bei der Abmeldung geloscht.
+        </p>
+
+        <h3>Kontoloschung</h3>
+        <p>
+          Sie konnen die Loschung Ihres Benutzerkontos und aller damit verbundenen Daten jederzeit
+          per E-Mail an die im Impressum genannte Adresse anfordern.
+        </p>
+      </section>
+
+      <section className="legal-page__section">
+        <h2>5. Bestellungen &amp; Zahlungsabwicklung</h2>
         <p>
           Wenn Sie eine Bestellung aufgeben, verarbeiten wir folgende Daten:
         </p>
@@ -91,7 +129,7 @@ export default function CookiePolicy() {
       </section>
 
       <section className="legal-page__section">
-        <h2>5. Ihre Rechte</h2>
+        <h2>6. Ihre Rechte</h2>
         <p>Sie haben jederzeit das Recht:</p>
         <ul>
           <li><strong>Auskunft</strong> uber Ihre bei uns gespeicherten personenbezogenen Daten zu erhalten (Art. 15 DSGVO)</li>
@@ -108,7 +146,7 @@ export default function CookiePolicy() {
       </section>
 
       <section className="legal-page__section">
-        <h2>6. Beschwerderecht bei einer Aufsichtsbehorde</h2>
+        <h2>7. Beschwerderecht bei einer Aufsichtsbehorde</h2>
         <p>
           Wenn Sie der Ansicht sind, dass die Verarbeitung Ihrer personenbezogenen Daten gegen die
           DSGVO verstosst, haben Sie das Recht, sich bei einer Datenschutz-Aufsichtsbehorde zu
@@ -117,7 +155,7 @@ export default function CookiePolicy() {
       </section>
 
       <section className="legal-page__section">
-        <h2>7. Anderung dieser Richtlinie</h2>
+        <h2>8. Anderung dieser Richtlinie</h2>
         <p>
           Wir behalten uns vor, diese Datenschutz- und Cookie-Richtlinie anzupassen, damit sie
           stets den aktuellen rechtlichen Anforderungen entspricht oder um Anderungen unserer

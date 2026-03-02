@@ -9,6 +9,8 @@ import Cancel from "./pages/Cancel";
 import Admin from "./pages/Admin";
 import Impressum from "./pages/Impressum";
 import CookiePolicy from "./pages/CookiePolicy";
+import Login from "./pages/Login";
+import Account from "./pages/Account";
 
 export default function App() {
   return (
@@ -23,6 +25,8 @@ export default function App() {
         <Route path="/admin" element={<Admin />} />
         <Route path="/impressum" element={<Impressum />} />
         <Route path="/cookies" element={<CookiePolicy />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/account" element={<Account />} />
       </Routes>
     </Layout>
   );

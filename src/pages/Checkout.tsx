@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useCart } from "../lib/cart";
+import { useConvexAuth } from "convex/react";
 import { EU_COUNTRIES, getShippingRate, getVatRate, extractVat } from "../lib/euConfig";
 
 const CHECKOUT_MODE = import.meta.env.VITE_CHECKOUT_MODE || "demo";
@@ -10,6 +11,8 @@ const CHECKOUT_MODE = import.meta.env.VITE_CHECKOUT_MODE || "demo";
 export default function Checkout() {
   const { items, totalItems } = useCart();
   const navigate = useNavigate();
+  const { isAuthenticated } = useConvexAuth();
+  const userProfile = useQuery(api.users.me, isAuthenticated ? {} : "skip");
 
   const productIds = items.map((i) => i.productId);
   const products = useQuery(
@@ -31,6 +34,28 @@ export default function Checkout() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [prefilled, setPrefilled] = useState(false);
+
+  useEffect(() => {
+    if (userProfile && !prefilled) {
+      setForm((f) => ({
+        ...f,
+        email: userProfile.email || f.email,
+        ...(userProfile.savedAddress
+          ? {
+              name: userProfile.savedAddress.name || f.name,
+              line1: userProfile.savedAddress.line1 || f.line1,
+              line2: userProfile.savedAddress.line2 || f.line2,
+              city: userProfile.savedAddress.city || f.city,
+              state: userProfile.savedAddress.state || f.state,
+              postalCode: userProfile.savedAddress.postalCode || f.postalCode,
+              country: userProfile.savedAddress.country || f.country,
+            }
+          : {}),
+      }));
+      setPrefilled(true);
+    }
+  }, [userProfile, prefilled]);
 
   if (totalItems === 0) {
     return (
