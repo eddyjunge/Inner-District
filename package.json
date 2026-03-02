@@ -31,6 +31,11 @@
     "react-router": "^7.13.1",
     "stripe": "^20.4.0"
   },
+  "overrides": {
+    "@convex-dev/workos": {
+      "@workos-inc/authkit-react": "$@workos-inc/authkit-react"
+    }
+  },
   "devDependencies": {
     "@types/node": "^25.3.2",
     "@types/react": "^19.2.14",
