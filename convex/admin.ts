@@ -1,12 +1,15 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 async function assertAdmin(ctx: any) {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity || !identity.email) {
-    throw new Error("Not authenticated");
-  }
-  const email = identity.email.toLowerCase();
+  const userId = await getAuthUserId(ctx);
+  if (!userId) throw new Error("Not authenticated");
+
+  const user = await ctx.db.get(userId);
+  if (!user?.email) throw new Error("Not authenticated");
+
+  const email = (user.email as string).toLowerCase();
 
   const envAdmins = (process.env.ADMIN_EMAILS ?? "")
     .split(",")

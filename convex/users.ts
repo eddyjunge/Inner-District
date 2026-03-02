@@ -1,22 +1,23 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 export const me = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
 
-    const user = await ctx.db
-      .query("users")
-      .filter((q) => q.eq(q.field("email"), identity.email))
-      .first();
+    const user = await ctx.db.get(userId);
+    if (!user) return null;
+
+    const email = (user.email as string) ?? "";
 
     return {
-      email: identity.email ?? "",
-      name: identity.name ?? (user as any)?.name ?? "",
+      email,
+      name: (user.name as string) ?? "",
       savedAddress: (user as any)?.savedAddress ?? null,
-      isAdmin: await isAdmin(ctx, identity.email ?? ""),
+      isAdmin: await isAdmin(ctx, email),
     };
   },
 });
@@ -34,29 +35,25 @@ export const saveAddress = mutation({
     }),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
 
-    const user = await ctx.db
-      .query("users")
-      .filter((q) => q.eq(q.field("email"), identity.email))
-      .first();
-
-    if (user) {
-      await ctx.db.patch(user._id, { savedAddress: args.address } as any);
-    }
+    await ctx.db.patch(userId, { savedAddress: args.address } as any);
   },
 });
 
 export const myOrders = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity || !identity.email) return [];
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+
+    const user = await ctx.db.get(userId);
+    if (!user?.email) return [];
 
     return await ctx.db
       .query("orders")
-      .withIndex("by_email", (q) => q.eq("email", identity.email!))
+      .withIndex("by_email", (q) => q.eq("email", user.email!))
       .order("desc")
       .collect();
   },
