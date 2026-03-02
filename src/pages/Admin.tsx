@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback, Fragment } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useConvexAuth } from "convex/react";
+import { useAuthActions } from "@convex-dev/auth/react";
+import { Navigate } from "react-router";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 
@@ -28,6 +30,27 @@ const emptyForm: ProductForm = {
 };
 
 export default function Admin() {
+  const { isAuthenticated, isLoading } = useConvexAuth();
+  const user = useQuery(api.users.me, isAuthenticated ? {} : "skip");
+  const { signOut } = useAuthActions();
+
+  if (isLoading) return <p className="loading">Loading</p>;
+  if (!isAuthenticated) return <Navigate to="/login?returnTo=/admin" replace />;
+  if (user === undefined) return <p className="loading">Loading</p>;
+  if (!user?.isAdmin) {
+    return (
+      <div className="login">
+        <h1 className="login__title">Not Authorized</h1>
+        <p style={{ textAlign: "center", color: "var(--muted)", marginBottom: "1rem" }}>
+          Your account ({user?.email}) does not have admin access.
+        </p>
+        <button className="login__btn" onClick={() => void signOut()}>
+          Sign Out
+        </button>
+      </div>
+    );
+  }
+
   return <AdminDashboard />;
 }
 
